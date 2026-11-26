@@ -122,11 +122,9 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
       sourceEntityType: "BasicDesignDoc",
       sourceRecordIds: basicDocumentIds,
     });
-    const unlocked = await api.post(
-      `/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`,
-      { headers: authHeader },
-    );
-    expect(unlocked.ok(), await unlocked.text()).toBeTruthy();
+    // Client approval of the Basic Design review already moves the project to Detail Design.
+    const advanced = await api.get(`/api/design-projects/${projectId}`, { headers: authHeader });
+    expect((await advanced.json()).currentStage).toBe("ShopDrawing");
 
     // Approved shop drawing to bundle.
     const shopCreate = await api.post("/api/shop-drawings", {

@@ -165,7 +165,8 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     // remains the API enum, while Detail Design is the customer-facing term.
     const readiness = page.locator("section").filter({
       hasText:
-        /Sẵn sàng chuyển Thiết kế chi tiết|Ready for Detail Design|准备转详细设计|詳細設計移行の準備/i,
+        // Once every discipline is approved the panel takes its "ready" heading.
+        /Đã đủ điều kiện chuyển Thiết kế chi tiết|Ready to move to Detail Design|已具备转入详细设计的条件|詳細設計へ移行できます|Sẵn sàng chuyển Thiết kế chi tiết|Ready for Detail Design/i,
     });
     for (const label of ["Kiến trúc", "Kết cấu", "MEP"]) {
       await expect(

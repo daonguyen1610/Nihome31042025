@@ -81,7 +81,10 @@ test("RFQ upload retains rejected files and blocks duplicate drops while busy", 
   loginInBrowserAs,
 }) => {
   const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
-  const projectsResponse = await api.get("/api/operational-projects?pageSize=100", { headers });
+  const projectsResponse = await api.get(
+    "/api/operational-projects?pageSize=100&search=PJ-SAMPLE-RFQ",
+    { headers },
+  );
   expect(projectsResponse.ok()).toBeTruthy();
   const project = (await projectsResponse.json()).items.find(
     (item: { code: string }) => item.code === "PJ-SAMPLE-RFQ",

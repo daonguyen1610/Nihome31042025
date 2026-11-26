@@ -131,11 +131,11 @@ test("Concept dossier preserves context and supports accessible responsive forms
       INSERT INTO project_documents
         (OperationalProjectId, Category, SourceModule, SourceType, SourceEntityType, SourceRecordId,
          LocalPath, OriginalFileName, ContentType, Size, Sha256, Origin, Generation, DesiredOperation,
-         SyncStatus, SyncAttemptCount, IsDownloadable, ConflictState, CreatedAt, UpdatedAt)
+         SyncStatus, SyncAttemptCount, IsDownloadable, ConflictState, CreatedAt, UpdatedAt, DriveCheckedAt)
       OUTPUT INSERTED.Id
       VALUES (${operationalId}, 'DesignConcept', 'Design', 'ManualUpload', 'ConceptOption', ${optionId},
         '${path}', '${fixture.name}', '${fixture.contentType}', ${fixture.bytes.length}, '${digest}', 'Nicon', 1, 'None',
-        'Synced', 0, 1, 'None', SYSUTCDATETIME(), SYSUTCDATETIME());`);
+        'Synced', 0, 1, 'None', SYSUTCDATETIME(), SYSUTCDATETIME(), SYSUTCDATETIME());`);
     const documentId = Number(output.trim());
     fixtureIds.push(documentId);
     if (fixture.kind) {

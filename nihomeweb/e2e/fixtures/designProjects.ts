@@ -155,8 +155,10 @@ export async function approveDesignStage(
   const recipient = users.items.find((user) => user.phoneNumber === TEST_USERS.sale.phoneNumber);
   if (!architect || !recipient) throw new Error("Required seeded design-review users are missing.");
 
+  // Task assignees must be members of this design project, not only of the operational one.
+  const teamUrl = `/api/operational-projects/${project.operationalProjectId}/team`;
   let team = await json<{ members: Array<{ id: number; userId: number }> }>(
-    await api.get(`/api/operational-projects/${project.operationalProjectId}/team`, {
+    await api.get(`${teamUrl}?designProjectId=${options.projectId}`, {
       headers: options.headers,
     }),
     "load project team",
@@ -168,6 +170,7 @@ export async function approveDesignStage(
         headers: { ...options.headers, "Idempotency-Key": `review-assignee-${unique}` },
         data: {
           userId: architect.id,
+          designProjectId: options.projectId,
           position: "Kiến trúc sư triển khai hồ sơ",
           startedAt: "2026-01-01T00:00:00Z",
           roles: [{ roleCode: "Architect", scope: "Project" }],
@@ -177,7 +180,7 @@ export async function approveDesignStage(
     );
   }
   team = await json<{ members: Array<{ id: number; userId: number }> }>(
-    await api.get(`/api/operational-projects/${project.operationalProjectId}/team`, {
+    await api.get(`${teamUrl}?designProjectId=${options.projectId}`, {
       headers: options.headers,
     }),
     "reload project team",
@@ -226,7 +229,7 @@ export async function approveDesignStage(
           code: `REV-${options.stage}-${unique}`.slice(0, 80),
           name: `Hoàn thiện hồ sơ ${options.stage}`,
           description: "Đầu việc kiểm soát hồ sơ trước khi trình nội bộ.",
-          departmentCode: "architecture",
+          departmentCode: "DESIGN",
           assigneeMemberId: assignee.id,
           approverMemberId: approver.id,
           isMilestone: false,
