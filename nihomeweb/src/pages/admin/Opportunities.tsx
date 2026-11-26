@@ -25,6 +25,7 @@ import {
   Trophy,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { ListPanel, ListTabs, PageHeader, statusTabs } from "@/components/admin/ListLayout";
 import { useI18n } from "@/lib/i18n";
 import { useListExport } from "@/hooks/useListExport";
 import AdminExportButton from "@/components/admin/AdminExportButton";
@@ -203,6 +204,9 @@ const AdminOpportunities = () => {
   const [pipelineLoading, setPipelineLoading] = useState(false);
 
   const [page, setPage] = useState(1);
+  const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
+  const tabCount = Object.values(tabCounts).reduce((sum, value) => sum + value, 0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 20;
 
   // filters
@@ -254,6 +258,7 @@ const AdminOpportunities = () => {
       const { data } = await adminApi.listOpportunities({ ...listFilters, page, pageSize });
       setRows(data.items);
       setTotal(data.total);
+      setTabCounts(data.stageCounts ?? {});
     } catch (err) {
       setError(uiError(err));
     } finally {
@@ -821,59 +826,55 @@ const AdminOpportunities = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">{t("opportunities.title")}</h1>
-            <p className="text-muted-foreground text-sm max-w-3xl">{t("opportunities.subtitle")}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {loading
-                ? t("common.loading")
-                : (canSeeAll
-                    ? t("opportunities.totalCount")
-                    : t("opportunities.myScopeCount")
-                  ).replace("{count}", total.toString())}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 items-center">
-            <div className="flex rounded-md border overflow-hidden">
-              <button
-                type="button"
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm ${view === "table" ? "bg-muted" : ""}`}
-                onClick={() => setView("table")}
-                aria-label={t("opportunities.viewToggle.table")}
+        <PageHeader
+          title={t("opportunities.title")}
+          count={tabCount}
+          description={
+            canSeeAll
+              ? t("opportunities.subtitle")
+              : t("opportunities.myScopeCount").replace("{count}", total.toString())
+          }
+          actions={
+            <>
+              <div className="flex rounded-md border overflow-hidden">
+                <button
+                  type="button"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm ${view === "table" ? "bg-muted" : ""}`}
+                  onClick={() => setView("table")}
+                  aria-label={t("opportunities.viewToggle.table")}
+                >
+                  <List className="h-4 w-4" /> {t("opportunities.viewToggle.table")}
+                </button>
+                <button
+                  type="button"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border-l ${view === "pipeline" ? "bg-muted" : ""}`}
+                  onClick={() => setView("pipeline")}
+                  aria-label={t("opportunities.viewToggle.pipeline")}
+                >
+                  <LayoutGrid className="h-4 w-4" /> {t("opportunities.viewToggle.pipeline")}
+                </button>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => (view === "table" ? void fetchList() : void fetchPipeline())}
               >
-                <List className="h-4 w-4" /> {t("opportunities.viewToggle.table")}
-              </button>
-              <button
-                type="button"
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border-l ${view === "pipeline" ? "bg-muted" : ""}`}
-                onClick={() => setView("pipeline")}
-                aria-label={t("opportunities.viewToggle.pipeline")}
-              >
-                <LayoutGrid className="h-4 w-4" /> {t("opportunities.viewToggle.pipeline")}
-              </button>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => (view === "table" ? void fetchList() : void fetchPipeline())}
-            >
-              <RefreshCw className="mr-1.5 h-4 w-4" /> {t("common.refresh")}
-            </Button>
-            {view === "table" && (
-              <AdminExportButton
-                onClick={() => void exportOpportunities()}
-                disabled={total === 0 || exporting}
-                label={exporting ? t("common.exporting") : undefined}
-              />
-            )}
-            {canManage && (
-              <Button onClick={openCreate}>
-                <Plus className="mr-1.5 h-4 w-4" /> {t("opportunities.new")}
+                <RefreshCw className="mr-1.5 h-4 w-4" /> {t("common.refresh")}
               </Button>
-            )}
-          </div>
-        </header>
+              {view === "table" && (
+                <AdminExportButton
+                  onClick={() => void exportOpportunities()}
+                  disabled={total === 0 || exporting}
+                  label={exporting ? t("common.exporting") : undefined}
+                />
+              )}
+              {canManage && (
+                <Button onClick={openCreate}>
+                  <Plus className="mr-1.5 h-4 w-4" /> {t("opportunities.new")}
+                </Button>
+              )}
+            </>
+          }
+        />
 
         {lookupFailed && (
           <InlineWarning
@@ -882,300 +883,152 @@ const AdminOpportunities = () => {
           />
         )}
 
-        <section className="grid items-end gap-3 rounded-lg border bg-card p-3 md:grid-cols-7">
-          <div className="md:col-span-2">
-            <Label className="text-xs" htmlFor="opportunity-search">
-              {t("opportunities.filter.search")}
-            </Label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="opportunity-search"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder={t("opportunities.searchPlaceholder")}
-                className="h-9 pl-9"
-              />
-            </div>
-          </div>
-          <FieldScope>
-            <Label className="text-xs">{t("opportunities.filter.stage")}</Label>
-            <Select
-              value={stageFilter || "all"}
-              onValueChange={(v) => {
-                setStageFilter(v === "all" ? "" : (v as OpportunityStage));
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder={t("opportunities.filter.all")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("opportunities.filter.all")}</SelectItem>
-                {OPPORTUNITY_STAGES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {t(`opportunities.stage.${s}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldScope>
-          <FieldScope>
-            <Label className="text-xs">{t("opportunities.filter.customer")}</Label>
-            <Select
-              value={customerFilter ? String(customerFilter) : "all"}
-              onValueChange={(v) => {
-                setCustomerFilter(v === "all" ? "" : Number(v));
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder={t("opportunities.filter.all")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("opportunities.filter.all")}</SelectItem>
-                {customers.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldScope>
-          <FieldScope>
-            <Label className="text-xs">{t("opportunities.filter.minValue")}</Label>
-            <MoneyInput
-              value={Number(minValue) || 0}
-              onChange={(value) => {
-                setMinValue(value ? String(value) : "");
-                setPage(1);
-              }}
-              aria-label={t("opportunities.filter.minValue")}
-              className="h-9"
-            />
-          </FieldScope>
-          <FieldScope>
-            <Label className="text-xs">{t("opportunities.filter.maxValue")}</Label>
-            <MoneyInput
-              value={Number(maxValue) || 0}
-              onChange={(value) => {
-                setMaxValue(value ? String(value) : "");
-                setPage(1);
-              }}
-              aria-label={t("opportunities.filter.maxValue")}
-              className="h-9"
-            />
-          </FieldScope>
-        </section>
-
-        {view === "table" ? (
-          loading ? (
-            <PageLoading />
-          ) : error ? (
-            <PageError message={error} onRetry={() => void fetchList()} />
-          ) : rows.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-              <div className="rounded-full bg-muted p-3">
-                <Search className="h-5 w-5" aria-hidden />
+        <ListTabs
+          label={t("opportunities.filter.stage")}
+          tabs={statusTabs(t("common.all"), OPPORTUNITY_STAGES, tabCounts, stageFilter, (value) =>
+            t(`opportunities.stage.${value}`),
+          )}
+          value={stageFilter}
+          onChange={(next) => {
+            setStageFilter(next);
+            setPage(1);
+          }}
+        />
+        <ListPanel
+          search={
+            <>
+              <div className="md:col-span-2">
+                <Label className="sr-only" htmlFor="opportunity-search">
+                  {t("opportunities.filter.search")}
+                </Label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="opportunity-search"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder={t("opportunities.searchPlaceholder")}
+                    className="pl-9"
+                  />
+                </div>
               </div>
-              <p>{t("opportunities.empty")}</p>
-              {canManage && (
-                <Button size="sm" onClick={openCreate}>
-                  <Plus className="mr-1.5 h-4 w-4" /> {t("opportunities.new")}
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {/* Mobile / tablet card view (<lg). Keeps the row-click-to-detail
+            </>
+          }
+          filterCount={
+            [customerFilter !== "", minValue !== "", maxValue !== ""].filter(Boolean).length
+          }
+          filtersOpen={filtersOpen}
+          onFiltersOpenChange={setFiltersOpen}
+          onClear={
+            searchInput !== "" ||
+            stageFilter !== "" ||
+            [customerFilter !== "", minValue !== "", maxValue !== ""].some(Boolean)
+              ? () => {
+                  setSearchInput("");
+                  setSearch("");
+                  setStageFilter("");
+                  setCustomerFilter("");
+                  setMinValue("");
+                  setMaxValue("");
+                  setPage(1);
+                }
+              : undefined
+          }
+          filters={
+            <>
+              <FieldScope>
+                <Label className="text-xs">{t("opportunities.filter.customer")}</Label>
+                <Select
+                  value={customerFilter ? String(customerFilter) : "all"}
+                  onValueChange={(v) => {
+                    setCustomerFilter(v === "all" ? "" : Number(v));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("opportunities.filter.all")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("opportunities.filter.all")}</SelectItem>
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FieldScope>
+              <FieldScope>
+                <Label className="text-xs">{t("opportunities.filter.minValue")}</Label>
+                <MoneyInput
+                  value={Number(minValue) || 0}
+                  onChange={(value) => {
+                    setMinValue(value ? String(value) : "");
+                    setPage(1);
+                  }}
+                  aria-label={t("opportunities.filter.minValue")}
+                />
+              </FieldScope>
+              <FieldScope>
+                <Label className="text-xs">{t("opportunities.filter.maxValue")}</Label>
+                <MoneyInput
+                  value={Number(maxValue) || 0}
+                  onChange={(value) => {
+                    setMaxValue(value ? String(value) : "");
+                    setPage(1);
+                  }}
+                  aria-label={t("opportunities.filter.maxValue")}
+                />
+              </FieldScope>
+            </>
+          }
+        >
+          {view === "table" ? (
+            loading ? (
+              <PageLoading />
+            ) : error ? (
+              <PageError message={error} onRetry={() => void fetchList()} />
+            ) : rows.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 p-10 text-center text-sm text-muted-foreground">
+                <div className="rounded-full bg-muted p-3">
+                  <Search className="h-5 w-5" aria-hidden />
+                </div>
+                <p>{t("opportunities.empty")}</p>
+                {canManage && (
+                  <Button size="sm" onClick={openCreate}>
+                    <Plus className="mr-1.5 h-4 w-4" /> {t("opportunities.new")}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {/* Mobile / tablet card view (<lg). Keeps the row-click-to-detail
                   affordance and inline edit/delete for parity with the table. */}
-              <ul className="grid gap-3 xl:hidden">
-                {rows.map((o) => {
-                  const overdue = isOpportunityOverdue(o.expectedCloseDate, o.stage);
-                  return (
-                    <li
-                      key={o.id}
-                      data-testid={`opportunity-card-${o.id}`}
-                      className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/30"
-                      {...rowAction(() => void openDetail(o.id))}
-                    >
-                      <header className="flex items-start gap-2">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="break-words text-sm font-semibold leading-tight">
-                            {o.name}
-                          </h3>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {o.customerName ??
-                              customerLabel.get(o.customerId) ??
-                              `#${o.customerId}`}
-                          </p>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "shrink-0 gap-1.5 whitespace-nowrap font-medium",
-                            OPPORTUNITY_STAGE_STYLES[o.stage],
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "h-1.5 w-1.5 rounded-full",
-                              OPPORTUNITY_STAGE_DOT[o.stage],
-                            )}
-                          />
-                          {t(`opportunities.stage.${o.stage}`)}
-                        </Badge>
-                      </header>
-
-                      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                        <div>
-                          <dt className="text-muted-foreground">
-                            {t("opportunities.field.estimatedValue")}
-                          </dt>
-                          <dd className="tabular-nums font-medium">
-                            {formatMoney(o.estimatedValue, o.currency)}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">
-                            {t("opportunities.field.winProbability")}
-                          </dt>
-                          <dd className="font-medium">{o.winProbability}%</dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">
-                            {t("opportunities.field.expectedCloseDate")}
-                          </dt>
-                          <dd
-                            className={cn(
-                              "font-medium",
-                              overdue && "flex items-center gap-1 text-destructive",
-                            )}
-                          >
-                            {overdue && (
-                              <AlertTriangle
-                                className="h-3 w-3"
-                                aria-label={t("opportunities.overdue")}
-                              />
-                            )}
-                            {o.expectedCloseDate ? formatDate(o.expectedCloseDate) : "—"}
-                          </dd>
-                        </div>
-                        {canSeeAll && (
-                          <div>
-                            <dt className="text-muted-foreground">
-                              {t("opportunities.field.owner")}
-                            </dt>
-                            <dd className="truncate font-medium">{o.ownerName ?? "—"}</dd>
-                          </div>
-                        )}
-                      </dl>
-
-                      {canManage && (
-                        <footer
-                          className="mt-3 flex items-center justify-end gap-1 border-t pt-2"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {!isTerminalStage(o.stage) && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => void openDetail(o.id, { startEditing: true })}
-                              title={t("common.edit")}
-                              aria-label={t("common.edit")}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => void handleDelete(o.id)}
-                            title={t("common.delete")}
-                            aria-label={t("common.delete")}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </footer>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-
-              {/* Desktop table view (lg+) */}
-              <div className="hidden overflow-x-auto rounded-lg border xl:block">
-                <table className="min-w-[960px] w-full divide-y text-sm">
-                  <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-                    <tr>
-                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                        {t("opportunities.field.name")}
-                      </th>
-                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                        {t("opportunities.field.customer")}
-                      </th>
-                      <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
-                        {t("opportunities.field.estimatedValue")}
-                      </th>
-                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                        {t("opportunities.field.winProbability")}
-                      </th>
-                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                        {t("opportunities.field.expectedCloseDate")}
-                      </th>
-                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                        {t("opportunities.field.stage")}
-                      </th>
-                      {canSeeAll && (
-                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                          {t("opportunities.field.owner")}
-                        </th>
-                      )}
-                      {canManage && <th className="px-3 py-3" />}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {rows.map((o) => (
-                      <tr
+                <ul className="grid gap-3 p-3 xl:hidden">
+                  {rows.map((o) => {
+                    const overdue = isOpportunityOverdue(o.expectedCloseDate, o.stage);
+                    return (
+                      <li
                         key={o.id}
-                        className="cursor-pointer hover:bg-muted/40"
+                        data-testid={`opportunity-card-${o.id}`}
+                        className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/30"
                         {...rowAction(() => void openDetail(o.id))}
                       >
-                        <td className="px-3 py-3 font-medium">{o.name}</td>
-                        <td className="px-3 py-3">
-                          {o.customerName ?? customerLabel.get(o.customerId) ?? `#${o.customerId}`}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
-                          {formatMoney(o.estimatedValue, o.currency)}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-xs">{o.winProbability}%</td>
-                        <td className="whitespace-nowrap px-3 py-3 text-xs">
-                          {o.expectedCloseDate ? (
-                            <span
-                              className={
-                                isOpportunityOverdue(o.expectedCloseDate, o.stage)
-                                  ? "inline-flex items-center gap-1 text-destructive font-medium"
-                                  : "text-muted-foreground"
-                              }
-                            >
-                              {isOpportunityOverdue(o.expectedCloseDate, o.stage) && (
-                                <AlertTriangle
-                                  className="h-3 w-3"
-                                  aria-label={t("opportunities.overdue")}
-                                />
-                              )}
-                              {formatDate(o.expectedCloseDate)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-3">
+                        <header className="flex items-start gap-2">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="break-words text-sm font-semibold leading-tight">
+                              {o.name}
+                            </h3>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {o.customerName ??
+                                customerLabel.get(o.customerId) ??
+                                `#${o.customerId}`}
+                            </p>
+                          </div>
                           <Badge
                             variant="outline"
                             className={cn(
-                              "gap-1.5 whitespace-nowrap font-medium",
+                              "shrink-0 gap-1.5 whitespace-nowrap font-medium",
                               OPPORTUNITY_STAGE_STYLES[o.stage],
                             )}
                           >
@@ -1187,146 +1040,317 @@ const AdminOpportunities = () => {
                             />
                             {t(`opportunities.stage.${o.stage}`)}
                           </Badge>
-                        </td>
-                        {canSeeAll && (
-                          <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
-                            {o.ownerName || "—"}
-                          </td>
-                        )}
+                        </header>
+
+                        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                          <div>
+                            <dt className="text-muted-foreground">
+                              {t("opportunities.field.estimatedValue")}
+                            </dt>
+                            <dd className="tabular-nums font-medium">
+                              {formatMoney(o.estimatedValue, o.currency)}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">
+                              {t("opportunities.field.winProbability")}
+                            </dt>
+                            <dd className="font-medium">{o.winProbability}%</dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">
+                              {t("opportunities.field.expectedCloseDate")}
+                            </dt>
+                            <dd
+                              className={cn(
+                                "font-medium",
+                                overdue && "flex items-center gap-1 text-destructive",
+                              )}
+                            >
+                              {overdue && (
+                                <AlertTriangle
+                                  className="h-3 w-3"
+                                  aria-label={t("opportunities.overdue")}
+                                />
+                              )}
+                              {o.expectedCloseDate ? formatDate(o.expectedCloseDate) : "—"}
+                            </dd>
+                          </div>
+                          {canSeeAll && (
+                            <div>
+                              <dt className="text-muted-foreground">
+                                {t("opportunities.field.owner")}
+                              </dt>
+                              <dd className="truncate font-medium">{o.ownerName ?? "—"}</dd>
+                            </div>
+                          )}
+                        </dl>
+
                         {canManage && (
-                          <td className="px-3 py-3 text-right">
-                            <div className="flex justify-end gap-1">
-                              {!isTerminalStage(o.stage) && (
+                          <footer
+                            className="mt-3 flex items-center justify-end gap-1 border-t pt-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {!isTerminalStage(o.stage) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => void openDetail(o.id, { startEditing: true })}
+                                title={t("common.edit")}
+                                aria-label={t("common.edit")}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => void handleDelete(o.id)}
+                              title={t("common.delete")}
+                              aria-label={t("common.delete")}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </footer>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {/* Desktop table view (lg+) */}
+                <div className="hidden overflow-x-auto xl:block">
+                  <table className="min-w-[960px] w-full divide-y text-sm">
+                    <thead className="bg-muted/50 text-xs text-muted-foreground">
+                      <tr>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("opportunities.field.name")}
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("opportunities.field.customer")}
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
+                          {t("opportunities.field.estimatedValue")}
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("opportunities.field.winProbability")}
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("opportunities.field.expectedCloseDate")}
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("opportunities.field.stage")}
+                        </th>
+                        {canSeeAll && (
+                          <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                            {t("opportunities.field.owner")}
+                          </th>
+                        )}
+                        {canManage && <th className="px-3 py-3" />}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {rows.map((o) => (
+                        <tr
+                          key={o.id}
+                          className="cursor-pointer hover:bg-muted/40"
+                          {...rowAction(() => void openDetail(o.id))}
+                        >
+                          <td className="px-3 py-3 font-medium">{o.name}</td>
+                          <td className="px-3 py-3">
+                            {o.customerName ??
+                              customerLabel.get(o.customerId) ??
+                              `#${o.customerId}`}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
+                            {formatMoney(o.estimatedValue, o.currency)}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 text-xs">
+                            {o.winProbability}%
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 text-xs">
+                            {o.expectedCloseDate ? (
+                              <span
+                                className={
+                                  isOpportunityOverdue(o.expectedCloseDate, o.stage)
+                                    ? "inline-flex items-center gap-1 text-destructive font-medium"
+                                    : "text-muted-foreground"
+                                }
+                              >
+                                {isOpportunityOverdue(o.expectedCloseDate, o.stage) && (
+                                  <AlertTriangle
+                                    className="h-3 w-3"
+                                    aria-label={t("opportunities.overdue")}
+                                  />
+                                )}
+                                {formatDate(o.expectedCloseDate)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "gap-1.5 whitespace-nowrap font-medium",
+                                OPPORTUNITY_STAGE_STYLES[o.stage],
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "h-1.5 w-1.5 rounded-full",
+                                  OPPORTUNITY_STAGE_DOT[o.stage],
+                                )}
+                              />
+                              {t(`opportunities.stage.${o.stage}`)}
+                            </Badge>
+                          </td>
+                          {canSeeAll && (
+                            <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                              {o.ownerName || "—"}
+                            </td>
+                          )}
+                          {canManage && (
+                            <td className="px-3 py-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                {!isTerminalStage(o.stage) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void openDetail(o.id, { startEditing: true });
+                                    }}
+                                    title={t("common.edit")}
+                                    aria-label={t("common.edit")}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    void openDetail(o.id, { startEditing: true });
+                                    void handleDelete(o.id);
                                   }}
-                                  title={t("common.edit")}
-                                  aria-label={t("common.edit")}
+                                  title={t("common.delete")}
+                                  aria-label={t("common.delete")}
+                                  className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                 >
-                                  <Pencil className="h-4 w-4" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  void handleDelete(o.id);
-                                }}
-                                title={t("common.delete")}
-                                aria-label={t("common.delete")}
-                                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )
-        ) : pipelineLoading ? (
-          <PageLoading />
-        ) : (
-          // Mobile: single-row horizontal scroll (spec NIH-91). Desktop grid at lg / xl.
-          <div className="flex gap-3 overflow-x-auto pb-2 lg:grid lg:grid-cols-3 lg:overflow-visible xl:grid-cols-6">
-            {pipelineColumns.map((col) => (
-              <div
-                key={col.stage}
-                className="rounded-lg border bg-muted/20 flex flex-col min-w-[260px] lg:min-w-0"
-              >
-                <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/40 rounded-t-lg">
-                  <span className={cn("h-2 w-2 rounded-full", OPPORTUNITY_STAGE_DOT[col.stage])} />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">
-                      {t(`opportunities.stage.${col.stage}`)}
-                    </div>
-                    <div className="text-xs text-muted-foreground tabular-nums">
-                      {t("opportunities.pipeline.total")
-                        .replace("{count}", col.count.toString())
-                        .replace("{value}", formatVnd(col.totalValue))}
+            )
+          ) : pipelineLoading ? (
+            <PageLoading />
+          ) : (
+            // Mobile: single-row horizontal scroll (spec NIH-91). Desktop grid at lg / xl.
+            <div className="flex gap-3 overflow-x-auto pb-2 lg:grid lg:grid-cols-3 lg:overflow-visible xl:grid-cols-6">
+              {pipelineColumns.map((col) => (
+                <div
+                  key={col.stage}
+                  className="rounded-lg border bg-muted/20 flex flex-col min-w-[260px] lg:min-w-0"
+                >
+                  <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/40 rounded-t-lg">
+                    <span
+                      className={cn("h-2 w-2 rounded-full", OPPORTUNITY_STAGE_DOT[col.stage])}
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">
+                        {t(`opportunities.stage.${col.stage}`)}
+                      </div>
+                      <div className="text-xs text-muted-foreground tabular-nums">
+                        {t("opportunities.pipeline.total")
+                          .replace("{count}", col.count.toString())
+                          .replace("{value}", formatVnd(col.totalValue))}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="p-2 space-y-2 min-h-[120px]">
-                  {col.items.length === 0 ? (
-                    <div className="text-xs text-muted-foreground py-6 text-center">
-                      {t("opportunities.pipeline.empty")}
-                    </div>
-                  ) : (
-                    col.items.map((o) => {
-                      const overdue = isOpportunityOverdue(o.expectedCloseDate, o.stage);
-                      return (
-                        <button
-                          key={o.id}
-                          type="button"
-                          className={`w-full text-left rounded-md border bg-background p-2 text-xs hover:border-primary transition ${overdue ? "border-destructive/60" : ""}`}
-                          onClick={() => void openDetail(o.id)}
-                        >
-                          <div className="font-medium text-sm truncate">{o.name}</div>
-                          <div className="text-muted-foreground truncate">
-                            {o.customerName ?? `#${o.customerId}`}
-                          </div>
-                          <div className="mt-1 flex items-center justify-between">
-                            <span className="tabular-nums font-medium">
-                              {formatMoney(o.estimatedValue, o.currency)}
-                            </span>
-                            <span className="text-muted-foreground">{o.winProbability}%</span>
-                          </div>
-                          {o.expectedCloseDate && (
-                            <div
-                              className={`mt-1 text-xs flex items-center gap-1 ${overdue ? "text-destructive" : "text-muted-foreground"}`}
-                            >
-                              {overdue && <AlertTriangle className="h-3 w-3" />}
-                              {formatDate(o.expectedCloseDate)}
-                              {overdue && (
-                                <span className="font-medium">· {t("opportunities.overdue")}</span>
-                              )}
+                  <div className="p-2 space-y-2 min-h-[120px]">
+                    {col.items.length === 0 ? (
+                      <div className="text-xs text-muted-foreground py-6 text-center">
+                        {t("opportunities.pipeline.empty")}
+                      </div>
+                    ) : (
+                      col.items.map((o) => {
+                        const overdue = isOpportunityOverdue(o.expectedCloseDate, o.stage);
+                        return (
+                          <button
+                            key={o.id}
+                            type="button"
+                            className={`w-full text-left rounded-md border bg-background p-2 text-xs hover:border-primary transition ${overdue ? "border-destructive/60" : ""}`}
+                            onClick={() => void openDetail(o.id)}
+                          >
+                            <div className="font-medium text-sm truncate">{o.name}</div>
+                            <div className="text-muted-foreground truncate">
+                              {o.customerName ?? `#${o.customerId}`}
                             </div>
-                          )}
-                        </button>
-                      );
-                    })
-                  )}
+                            <div className="mt-1 flex items-center justify-between">
+                              <span className="tabular-nums font-medium">
+                                {formatMoney(o.estimatedValue, o.currency)}
+                              </span>
+                              <span className="text-muted-foreground">{o.winProbability}%</span>
+                            </div>
+                            {o.expectedCloseDate && (
+                              <div
+                                className={`mt-1 text-xs flex items-center gap-1 ${overdue ? "text-destructive" : "text-muted-foreground"}`}
+                              >
+                                {overdue && <AlertTriangle className="h-3 w-3" />}
+                                {formatDate(o.expectedCloseDate)}
+                                {overdue && (
+                                  <span className="font-medium">
+                                    · {t("opportunities.overdue")}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {view === "table" && total > pageSize && (
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} / {total}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                ‹
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page * pageSize >= total}
-              >
-                ›
-              </Button>
+              ))}
             </div>
-          </div>
-        )}
+          )}
+
+          {view === "table" && total > pageSize && (
+            <div className="flex items-center justify-between border-t p-3 text-sm text-muted-foreground">
+              <span>
+                {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} / {total}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  ‹
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page * pageSize >= total}
+                >
+                  ›
+                </Button>
+              </div>
+            </div>
+          )}
+        </ListPanel>
       </div>
 
       {/* ---------- Create dialog ---------- */}

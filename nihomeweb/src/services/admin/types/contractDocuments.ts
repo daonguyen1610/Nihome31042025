@@ -162,6 +162,7 @@ export interface OpportunityHistoryItem {
 }
 
 export interface OpportunityListResponse {
+  stageCounts?: Record<string, number>;
   total: number;
   page: number;
   pageSize: number;

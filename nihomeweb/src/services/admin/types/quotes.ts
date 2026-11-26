@@ -182,6 +182,7 @@ export interface QuoteListItemResponse {
 }
 
 export interface QuoteListResponse {
+  statusCounts?: Record<string, number>;
   total: number;
   page: number;
   pageSize: number;

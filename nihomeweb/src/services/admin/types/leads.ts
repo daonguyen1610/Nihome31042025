@@ -38,6 +38,7 @@ export interface LeadResponse {
 }
 
 export interface LeadListResponse {
+  statusCounts?: Record<string, number>;
   total: number;
   page: number;
   pageSize: number;

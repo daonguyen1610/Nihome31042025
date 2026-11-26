@@ -25,14 +25,13 @@ export function PageHeader({
   return (
     <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
-        <h1 className="flex flex-wrap items-baseline gap-x-2 text-2xl font-semibold">
-          {title}
+        {/* The count sits beside the heading, so the heading is still just the page's name. */}
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <h1 className="text-2xl font-semibold">{title}</h1>
           {count !== undefined && (
-            <span className="text-base font-normal tabular-nums text-muted-foreground">
-              ({count})
-            </span>
+            <span className="tabular-nums text-muted-foreground">({count})</span>
           )}
-        </h1>
+        </div>
         {description && (
           <p className="mt-1 max-w-[75ch] text-sm text-muted-foreground">{description}</p>
         )}
@@ -97,6 +96,29 @@ export function ListTabs<T extends string>({
       })}
     </div>
   );
+}
+
+/**
+ * "All" plus one quick view per status that holds records. An empty status adds nothing
+ * to choose, unless it is the one being viewed.
+ */
+export function statusTabs<T extends string>(
+  allLabel: string,
+  statuses: readonly T[],
+  counts: Record<string, number>,
+  selected: T | "",
+  labelOf: (status: T) => string,
+): ListTab<T | "">[] {
+  return [
+    {
+      value: "",
+      label: allLabel,
+      count: Object.values(counts).reduce((sum, value) => sum + value, 0),
+    },
+    ...statuses
+      .filter((status) => (counts[status] ?? 0) > 0 || status === selected)
+      .map((status) => ({ value: status, label: labelOf(status), count: counts[status] ?? 0 })),
+  ];
 }
 
 /**
