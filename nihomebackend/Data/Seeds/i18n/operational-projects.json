@@ -858,10 +858,10 @@
   {
     "key": "operationalProjects.documents.category.DesignIfc",
     "category": "operationalProjects",
-    "vi": "Thiết kế chi tiết (IFC)",
-    "en": "Detailed design (IFC)",
-    "zh": "施工图设计 (IFC)",
-    "ja": "実施設計 (IFC)"
+    "vi": "Bản vẽ IFC",
+    "en": "IFC drawings",
+    "zh": "IFC 图纸",
+    "ja": "IFC 図面"
   },
   {
     "key": "operationalProjects.documents.category.ConstructionPreparation",

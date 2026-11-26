@@ -1164,7 +1164,7 @@ Mỗi dự án có cây 8 thư mục theo PRD v2, tạo tự động khi Drive �
 | `02_HopDong` | Hợp đồng | Hợp đồng, phụ lục (mọi loại hợp đồng) |
 | `03_ThietKe/01_Concept` | Concept | Chỉ tải trực tiếp |
 | `03_ThietKe/02_CoSo` | Thiết kế cơ sở | Hồ sơ thiết kế cơ sở |
-| `03_ThietKe/03_ChiTiet_IFC` | Thiết kế chi tiết (IFC) | Chỉ tải trực tiếp |
+| `03_ThietKe/03_ChiTiet_IFC` | Bản vẽ IFC | Chỉ tải trực tiếp |
 | `03_ThietKe/04_ShopDrawing` | Shop drawing | Shop drawing |
 | `04_PhapLy` | Pháp lý | Hồ sơ nộp và giấy phép |
 | `05_ThiCong/01_ChuanBi` | Chuẩn bị thi công | Màn hình chuẩn bị thi công |
