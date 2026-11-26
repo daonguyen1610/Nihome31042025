@@ -1,4 +1,11 @@
+import type { Page } from "@playwright/test";
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+
+/** The filter fields sit behind one toolbar button; open it unless they already show. */
+async function openFilters(page: Page) {
+  const toggle = page.getByRole("button", { name: /^(Bộ lọc|Filters|筛选|絞り込み)( ?\d+)?$/ });
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+}
 
 test("Finance primary-contract list is upstream-only and server-paginated", async ({
   page,
@@ -26,6 +33,7 @@ test("Finance primary-contract list is upstream-only and server-paginated", asyn
       name: /Theo dõi phải thu|Receivables monitoring|应收跟踪|売掛金管理/i,
     }),
   ).toBeVisible();
+  await openFilters(page);
   await expect(page.locator("#c-owner")).toBeVisible();
   await expect(page.locator("#c-end-from")).toHaveAttribute(
     "aria-label",
@@ -37,9 +45,6 @@ test("Finance primary-contract list is upstream-only and server-paginated", asyn
   );
   await expect(page.locator("#c-direction")).toHaveCount(0);
   await expect(page.locator("#c-vendor")).toHaveCount(0);
-  await page
-    .getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i })
-    .click();
   await expect(page.locator("#c-sort-by")).toBeVisible();
   await expect(page.locator("#c-sort-direction")).toBeVisible();
   await expect
@@ -94,6 +99,7 @@ test("Finance receivables is a read-only projection of the contract registry", a
       url.searchParams.get("endFrom")?.startsWith("2026-01-01")
     );
   });
+  await openFilters(page);
   await page.locator("#c-end-from").fill("2026-01-01");
   expect((await endDateResponse).ok()).toBe(true);
   await expect(page).toHaveURL(/search=HD/);
@@ -262,9 +268,7 @@ test("Finance input-contract workspace keeps scope and edits only the financial 
     }),
   ).toBeVisible();
   await expect(page.locator("#c-direction")).toHaveCount(0);
-  await page
-    .getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i })
-    .click();
+  await openFilters(page);
   await expect(page.locator("#c-vendor")).toBeVisible();
   await expect(
     page
@@ -501,11 +505,11 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
 
   // Filters row (status select + search input) always renders.
   await expect(page.locator("#c-search")).toBeVisible();
-  await expect(page.locator("#c-status")).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: /Trạng thái|Status|状态|ステータス/ }),
+  ).toBeVisible();
+  await openFilters(page);
   await expect(page.locator("#c-project")).toBeVisible();
-  await page
-    .getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i })
-    .click();
   await expect(page.locator("#c-direction")).toBeVisible();
   await expect(page.locator("#c-type")).toBeVisible();
   await expect(page.locator("#c-vendor")).toBeVisible();

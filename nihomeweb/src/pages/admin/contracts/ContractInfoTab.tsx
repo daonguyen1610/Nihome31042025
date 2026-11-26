@@ -65,9 +65,7 @@ export const InfoTab = ({
         <dl className="grid gap-3 sm:grid-cols-2">
           {rows.map(([label, value]) => (
             <div key={label}>
-              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {label}
-              </dt>
+              <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
               <dd className="mt-0.5 text-sm text-foreground">{value}</dd>
             </div>
           ))}
@@ -89,7 +87,7 @@ export const InfoTab = ({
       onLinkQuote ? (
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="text-xs font-medium text-muted-foreground">
               {t("contracts.source.title")}
             </div>
             {onLinkQuote && contract.quoteId == null && (
@@ -164,7 +162,7 @@ export const InfoTab = ({
       ) : null}
 
       <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <div className="text-xs font-medium text-muted-foreground">
           {t("contracts.designProject.title")}
         </div>
         {contract.designProjectId != null ? (
@@ -205,7 +203,7 @@ export const InfoTab = ({
 
       {contract.scopeOfWork ? (
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="text-xs font-medium text-muted-foreground">
             {t("contracts.field.scope")}
           </div>
           <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{contract.scopeOfWork}</p>
@@ -213,7 +211,7 @@ export const InfoTab = ({
       ) : null}
       {contract.note ? (
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="text-xs font-medium text-muted-foreground">
             {t("contracts.field.note")}
           </div>
           <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{contract.note}</p>

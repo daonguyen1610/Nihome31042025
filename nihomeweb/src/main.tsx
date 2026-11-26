@@ -17,5 +17,6 @@ const render = () => root.render(<App />);
 // Paint immediately with the Vietnam + VND defaults, then re-render the tree
 // once the admin settings arrive or change.
 render();
-subscribeDisplaySettings(render);
+// The language is set while the app first renders, so re-render after that pass finishes.
+subscribeDisplaySettings(() => queueMicrotask(render));
 void loadDisplaySettings();
