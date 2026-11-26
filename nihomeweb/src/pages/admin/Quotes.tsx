@@ -121,8 +121,11 @@ const AdminQuotes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
-  const tabCount = Object.values(tabCounts).reduce((sum, value) => sum + value, 0);
+  // null until the first response: a count that is not known yet must not read as zero.
+  const [tabCounts, setTabCounts] = useState<Record<string, number> | null>(null);
+  const tabCount = tabCounts
+    ? Object.values(tabCounts).reduce((sum, value) => sum + value, 0)
+    : undefined;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 20;
 
@@ -520,15 +523,18 @@ const AdminQuotes = () => {
                 <table className="w-full divide-y text-sm">
                   <thead className="bg-muted/40 text-xs text-muted-foreground">
                     <tr>
-                      <Th>{t("quotes.field.code")}</Th>
-                      <Th>{t("quotes.field.opportunity")}</Th>
-                      <Th>{t("quotes.field.customer")}</Th>
+                      <Th>
+                        {t("quotes.field.code")} / {t("quotes.field.version")}
+                      </Th>
+                      <Th>
+                        {t("quotes.field.opportunity")} / {t("quotes.field.customer")}
+                      </Th>
                       <Th className="text-right">{t("quotes.field.grandTotal")}</Th>
-                      <Th>{t("quotes.field.status")}</Th>
+                      <Th>
+                        {t("quotes.field.status")} / {t("quotes.field.owner")}
+                      </Th>
                       <Th>{t("quotes.field.validUntil")}</Th>
-                      <Th>{t("quotes.field.owner")}</Th>
-                      <Th className="text-right">{t("quotes.field.version")}</Th>
-                      <Th className="sticky right-0 z-10 min-w-36 bg-muted/40 text-right shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)]">
+                      <Th className="sticky right-0 z-10 bg-muted/40 text-right shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)]">
                         &nbsp;
                       </Th>
                     </tr>
@@ -549,9 +555,14 @@ const AdminQuotes = () => {
                             >
                               {r.code}
                             </Link>
+                            <div className="text-xs text-muted-foreground">V{r.version}</div>
                           </Td>
-                          <Td className="min-w-40">{r.opportunityName ?? "—"}</Td>
-                          <Td className="min-w-40">{r.customerName ?? "—"}</Td>
+                          <Td className="min-w-36">
+                            <div>{r.opportunityName ?? "—"}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {r.customerName ?? "—"}
+                            </div>
+                          </Td>
                           <Td className="whitespace-nowrap text-right font-medium">
                             {r.status === "Draft" && r.grandTotal === 0
                               ? t("quotes.inputPrice.pricePending")
@@ -559,14 +570,15 @@ const AdminQuotes = () => {
                           </Td>
                           <Td>
                             <StatusCell status={r.status} expiring={r.isExpiringSoon} t={t} />
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {r.ownerName ?? "—"}
+                            </div>
                           </Td>
                           <Td className="whitespace-nowrap text-muted-foreground">
                             {formatDate(r.validUntil)}
                           </Td>
-                          <Td className="whitespace-nowrap">{r.ownerName ?? "—"}</Td>
-                          <Td className="text-right">V{r.version}</Td>
                           <Td
-                            className="sticky right-0 z-10 min-w-36 bg-card text-right shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)]"
+                            className="sticky right-0 z-10 bg-card text-right shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)]"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <RowActions
@@ -851,7 +863,7 @@ const RowActions = ({
     </Button>
   );
   return (
-    <div className={cn("flex flex-wrap gap-1", compact ? "justify-start" : "justify-end")}>
+    <div className={cn("flex gap-1", compact ? "flex-wrap justify-start" : "justify-end")}>
       {canManage &&
         actions.includes("submit") &&
         btn(t("quotes.action.submit"), <ThumbsUp className="h-3.5 w-3.5" />, () =>

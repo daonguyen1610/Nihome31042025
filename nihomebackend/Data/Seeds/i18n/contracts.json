@@ -2765,5 +2765,13 @@
   {"key": "contracts.review.error.notPending", "category": "contracts", "vi": "Hợp đồng không còn chờ xem xét. Tải lại trang để xem trạng thái mới.", "en": "This contract is no longer waiting for review. Reload the page to see its current status.", "zh": "此合同已不在待审核状态。请刷新页面查看当前状态。", "ja": "この契約はレビュー待ちではありません。ページを再読み込みしてください。"},
   {"key": "contracts.review.error.notYourTurn", "category": "contracts", "vi": "Chưa đến lượt bạn: bước này đang chờ người khác xem xét.", "en": "It is not your turn yet: someone else is reviewing this step.", "zh": "还未轮到您：此步骤正在由他人审核。", "ja": "まだあなたの番ではありません。このステップは別の人がレビュー中です。"},
   {"key": "contracts.review.error.notAllowed", "category": "contracts", "vi": "Bạn không còn đủ điều kiện xem xét bước này (vai trò hoặc quyền xem hợp đồng đã đổi, hoặc bạn là người soạn). Người soạn có thể chuyển hợp đồng về Nháp và gửi lại.", "en": "You can no longer review this step (your role or contract access changed, or you are its author). The author can move it back to Draft and send it again.", "zh": "您已无法审核此步骤（角色或合同权限已变更，或您是起草人）。起草人可将合同退回草稿后重新提交。", "ja": "このステップをレビューできません（ロールや権限が変わった、または作成者です）。作成者が下書きに戻して再送できます。"},
-  {"key": "contracts.review.error.locked", "category": "contracts", "vi": "Hợp đồng đang xem xét hoặc đã duyệt nên không sửa được. Chuyển về Nháp để sửa rồi gửi xem xét lại.", "en": "A contract under review or approved cannot be edited. Move it back to Draft, edit it, then send it for review again.", "zh": "审核中或已批准的合同不能修改。请退回草稿修改后重新提交审核。", "ja": "レビュー中または承認済みの契約は編集できません。下書きに戻して編集し、再度レビューに送ってください。"}
+  {"key": "contracts.review.error.locked", "category": "contracts", "vi": "Hợp đồng đang xem xét hoặc đã duyệt nên không sửa được. Chuyển về Nháp để sửa rồi gửi xem xét lại.", "en": "A contract under review or approved cannot be edited. Move it back to Draft, edit it, then send it for review again.", "zh": "审核中或已批准的合同不能修改。请退回草稿修改后重新提交审核。", "ja": "レビュー中または承認済みの契約は編集できません。下書きに戻して編集し、再度レビューに送ってください。"},
+  {
+    "key": "contracts.quickView.overdue",
+    "category": "contracts",
+    "vi": "Có đợt thanh toán quá hạn",
+    "en": "Overdue payments",
+    "zh": "有逾期款项",
+    "ja": "支払期限超過あり"
+  }
 ]

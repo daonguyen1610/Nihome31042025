@@ -139,8 +139,11 @@ const AdminLeads = () => {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
-  const tabCount = Object.values(tabCounts).reduce((sum, value) => sum + value, 0);
+  // null until the first response: a count that is not known yet must not read as zero.
+  const [tabCounts, setTabCounts] = useState<Record<string, number> | null>(null);
+  const tabCount = tabCounts
+    ? Object.values(tabCounts).reduce((sum, value) => sum + value, 0)
+    : undefined;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 20;
 
@@ -560,7 +563,7 @@ const AdminLeads = () => {
           title={t("leads.title")}
           count={tabCount}
           description={
-            canSeeAll
+            canSeeAll || !tabCounts
               ? t("leads.subtitle")
               : t("leads.myScopeCount").replace("{count}", total.toString())
           }

@@ -97,6 +97,11 @@ export function AttentionPanel() {
                           .filter(Boolean)
                           .join(" · ")}
                       </span>
+                      {item.relation === "Created" && item.assigneeName && (
+                        <span className="block text-xs font-medium">
+                          {t("myWork.assignedTo", { name: item.assigneeName })}
+                        </span>
+                      )}
                     </span>
                     {item.isOverdue ? (
                       <span className="status-pill chip-danger">

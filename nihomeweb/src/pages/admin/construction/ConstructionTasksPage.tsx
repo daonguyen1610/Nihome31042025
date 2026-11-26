@@ -994,7 +994,7 @@ export function ConstructionTasksPanel({
                         <Checkbox
                           checked={selected.has(row.id)}
                           onCheckedChange={(v) => toggleSelect(row.id, !!v)}
-                          aria-label={`m-select-${row.taskCode}`}
+                          aria-label={`${t("common.selectItem")} · ${row.taskCode}`}
                           className="mt-1"
                         />
                       </div>
@@ -1042,7 +1042,7 @@ export function ConstructionTasksPanel({
                           e.stopPropagation();
                           setDeleting(row);
                         }}
-                        aria-label={`m-delete-${row.taskCode}`}
+                        aria-label={`${t("common.delete")} · ${row.taskCode}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -1095,7 +1095,7 @@ export function ConstructionTasksPanel({
                             <Checkbox
                               checked={selected.has(row.id)}
                               onCheckedChange={(v) => toggleSelect(row.id, !!v)}
-                              aria-label={`select-${row.taskCode}`}
+                              aria-label={`${t("common.selectItem")} · ${row.taskCode}`}
                             />
                           </td>
                         )}

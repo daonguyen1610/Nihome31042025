@@ -788,7 +788,7 @@ export function AsBuiltDocumentsPanel({
                               else s.delete(r.id);
                               setSelected(s);
                             }}
-                            aria-label={`select-${r.id}`}
+                            aria-label={`${t("common.selectItem")} · ${r.documentCode}`}
                           />
                         </td>
                       )}

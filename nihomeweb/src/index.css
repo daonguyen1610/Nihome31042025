@@ -433,7 +433,7 @@
   --admin-bg: 230 25% 97%;
   --admin-surface: 0 0% 100%;
   --admin-text: 230 25% 14%;
-  --admin-muted: 230 10% 50%;
+  --admin-muted: 230 10% 43%;
   --admin-border: 230 20% 92%;
   --admin-primary: 354 84% 57%;
   --admin-primary-foreground: 0 0% 100%;
@@ -1120,7 +1120,7 @@
   align-items: center;
   gap: 0.5rem;
   max-width: 100%;
-  color: hsl(var(--admin-primary));
+  color: hsl(var(--primary));
   font-size: 0.85rem;
   font-weight: 800;
   overflow-wrap: anywhere;

@@ -821,7 +821,7 @@ export const PunchListPanel = ({
                         <Checkbox
                           checked={selected.has(row.id)}
                           onCheckedChange={(v) => toggleSelect(row.id, !!v)}
-                          aria-label={`m-select-${row.punchCode}`}
+                          aria-label={`${t("common.selectItem")} · ${row.punchCode}`}
                           className="mt-1"
                         />
                       </div>
@@ -927,7 +927,7 @@ export const PunchListPanel = ({
                             <Checkbox
                               checked={selected.has(row.id)}
                               onCheckedChange={(v) => toggleSelect(row.id, !!v)}
-                              aria-label={`select-${row.punchCode}`}
+                              aria-label={`${t("common.selectItem")} · ${row.punchCode}`}
                             />
                           </td>
                         )}
