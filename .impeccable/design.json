@@ -1,126 +1,359 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-10T07:43:20Z",
+  "generatedAt": "2026-11-26T14:54:51+00:00",
   "title": "Design System: Nicon Admin",
   "extensions": {
     "colorMeta": {
       "primary": {
         "role": "primary",
-        "displayName": "primary"
+        "displayName": "Nicon red",
+        "canonical": "hsl(354 84% 43%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.095 25.1)",
+          "oklch(32.0% 0.152 25.1)",
+          "oklch(43.0% 0.192 25.1)",
+          "oklch(54.0% 0.209 25.1)",
+          "oklch(65.0% 0.201 25.1)",
+          "oklch(76.0% 0.170 25.1)",
+          "oklch(87.0% 0.114 25.1)",
+          "oklch(96.0% 0.052 25.1)"
+        ]
       },
       "primary-foreground": {
-        "role": "neutral",
-        "displayName": "primary foreground"
+        "role": "primary",
+        "displayName": "On red",
+        "canonical": "hsl(0 0% 100%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.000 0.0)",
+          "oklch(32.0% 0.000 0.0)",
+          "oklch(43.0% 0.000 0.0)",
+          "oklch(54.0% 0.000 0.0)",
+          "oklch(65.0% 0.000 0.0)",
+          "oklch(76.0% 0.000 0.0)",
+          "oklch(87.0% 0.000 0.0)",
+          "oklch(96.0% 0.000 0.0)"
+        ]
       },
       "foreground": {
         "role": "neutral",
-        "displayName": "foreground"
+        "displayName": "Ink",
+        "canonical": "hsl(222 25% 12%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.010 266.6)",
+          "oklch(32.0% 0.016 266.6)",
+          "oklch(43.0% 0.020 266.6)",
+          "oklch(54.0% 0.022 266.6)",
+          "oklch(65.0% 0.021 266.6)",
+          "oklch(76.0% 0.018 266.6)",
+          "oklch(87.0% 0.012 266.6)",
+          "oklch(96.0% 0.006 266.6)"
+        ]
       },
       "admin-text": {
         "role": "neutral",
-        "displayName": "admin text"
+        "displayName": "Admin ink",
+        "canonical": "hsl(230 25% 14%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.013 275.3)",
+          "oklch(32.0% 0.021 275.3)",
+          "oklch(43.0% 0.027 275.3)",
+          "oklch(54.0% 0.029 275.3)",
+          "oklch(65.0% 0.028 275.3)",
+          "oklch(76.0% 0.023 275.3)",
+          "oklch(87.0% 0.016 275.3)",
+          "oklch(96.0% 0.007 275.3)"
+        ]
       },
       "card": {
         "role": "neutral",
-        "displayName": "card"
+        "displayName": "Paper",
+        "canonical": "hsl(0 0% 100%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.000 0.0)",
+          "oklch(32.0% 0.000 0.0)",
+          "oklch(43.0% 0.000 0.0)",
+          "oklch(54.0% 0.000 0.0)",
+          "oklch(65.0% 0.000 0.0)",
+          "oklch(76.0% 0.000 0.0)",
+          "oklch(87.0% 0.000 0.0)",
+          "oklch(96.0% 0.000 0.0)"
+        ]
       },
       "workspace": {
         "role": "neutral",
-        "displayName": "workspace"
+        "displayName": "Desk",
+        "canonical": "hsl(230 25% 97%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.002 0.0)",
+          "oklch(32.0% 0.003 277.2)",
+          "oklch(43.0% 0.004 277.2)",
+          "oklch(54.0% 0.004 277.2)",
+          "oklch(65.0% 0.004 277.2)",
+          "oklch(76.0% 0.003 277.2)",
+          "oklch(87.0% 0.002 277.2)",
+          "oklch(96.0% 0.001 0.0)"
+        ]
       },
       "muted": {
         "role": "neutral",
-        "displayName": "muted"
+        "displayName": "Quiet surface",
+        "canonical": "hsl(220 20% 96%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.002 0.0)",
+          "oklch(32.0% 0.003 264.5)",
+          "oklch(43.0% 0.004 264.5)",
+          "oklch(54.0% 0.004 264.5)",
+          "oklch(65.0% 0.004 264.5)",
+          "oklch(76.0% 0.003 264.5)",
+          "oklch(87.0% 0.002 264.5)",
+          "oklch(96.0% 0.001 0.0)"
+        ]
       },
       "muted-foreground": {
         "role": "neutral",
-        "displayName": "muted foreground"
+        "displayName": "Quiet ink",
+        "canonical": "hsl(220 9% 40%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.010 264.4)",
+          "oklch(32.0% 0.015 264.4)",
+          "oklch(43.0% 0.019 264.4)",
+          "oklch(54.0% 0.021 264.4)",
+          "oklch(65.0% 0.020 264.4)",
+          "oklch(76.0% 0.017 264.4)",
+          "oklch(87.0% 0.011 264.4)",
+          "oklch(96.0% 0.005 264.4)"
+        ]
       },
       "border": {
         "role": "neutral",
-        "displayName": "border"
-      },
-      "destructive": {
-        "role": "semantic",
-        "displayName": "destructive"
-      },
-      "destructive-foreground": {
-        "role": "semantic",
-        "displayName": "destructive foreground"
-      },
-      "success-soft": {
-        "role": "semantic",
-        "displayName": "success soft"
-      },
-      "success-strong": {
-        "role": "semantic",
-        "displayName": "success strong"
-      },
-      "warning-soft": {
-        "role": "semantic",
-        "displayName": "warning soft"
-      },
-      "warning-strong": {
-        "role": "semantic",
-        "displayName": "warning strong"
-      },
-      "info-soft": {
-        "role": "semantic",
-        "displayName": "info soft"
-      },
-      "info-strong": {
-        "role": "semantic",
-        "displayName": "info strong"
+        "displayName": "Rule",
+        "canonical": "hsl(220 15% 90%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.003 264.5)",
+          "oklch(32.0% 0.005 264.5)",
+          "oklch(43.0% 0.007 264.5)",
+          "oklch(54.0% 0.007 264.5)",
+          "oklch(65.0% 0.007 264.5)",
+          "oklch(76.0% 0.006 264.5)",
+          "oklch(87.0% 0.004 264.5)",
+          "oklch(96.0% 0.002 0.0)"
+        ]
       },
       "ring": {
-        "role": "neutral",
-        "displayName": "ring"
+        "role": "primary",
+        "displayName": "Focus ring",
+        "canonical": "hsl(354 84% 57%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.099 21.6)",
+          "oklch(32.0% 0.159 21.6)",
+          "oklch(43.0% 0.200 21.6)",
+          "oklch(54.0% 0.217 21.6)",
+          "oklch(65.0% 0.210 21.6)",
+          "oklch(76.0% 0.177 21.6)",
+          "oklch(87.0% 0.119 21.6)",
+          "oklch(96.0% 0.054 21.6)"
+        ]
+      },
+      "destructive": {
+        "role": "error",
+        "displayName": "Delete red",
+        "canonical": "hsl(354 68% 34%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.069 21.7)",
+          "oklch(32.0% 0.111 21.7)",
+          "oklch(43.0% 0.140 21.7)",
+          "oklch(54.0% 0.152 21.7)",
+          "oklch(65.0% 0.146 21.7)",
+          "oklch(76.0% 0.124 21.7)",
+          "oklch(87.0% 0.083 21.7)",
+          "oklch(96.0% 0.038 21.7)"
+        ]
+      },
+      "destructive-foreground": {
+        "role": "error",
+        "displayName": "On delete red",
+        "canonical": "hsl(0 0% 100%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.000 0.0)",
+          "oklch(32.0% 0.000 0.0)",
+          "oklch(43.0% 0.000 0.0)",
+          "oklch(54.0% 0.000 0.0)",
+          "oklch(65.0% 0.000 0.0)",
+          "oklch(76.0% 0.000 0.0)",
+          "oklch(87.0% 0.000 0.0)",
+          "oklch(96.0% 0.000 0.0)"
+        ]
+      },
+      "success-soft": {
+        "role": "status",
+        "displayName": "Done surface",
+        "canonical": "hsl(150 62% 94%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.011 164.5)",
+          "oklch(32.0% 0.017 164.5)",
+          "oklch(43.0% 0.022 164.5)",
+          "oklch(54.0% 0.023 164.5)",
+          "oklch(65.0% 0.023 164.5)",
+          "oklch(76.0% 0.019 164.5)",
+          "oklch(87.0% 0.013 164.5)",
+          "oklch(96.0% 0.006 164.5)"
+        ]
+      },
+      "success-strong": {
+        "role": "status",
+        "displayName": "Done ink",
+        "canonical": "hsl(150 62% 28%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.049 156.3)",
+          "oklch(32.0% 0.079 156.3)",
+          "oklch(43.0% 0.099 156.3)",
+          "oklch(54.0% 0.108 156.3)",
+          "oklch(65.0% 0.104 156.3)",
+          "oklch(76.0% 0.088 156.3)",
+          "oklch(87.0% 0.059 156.3)",
+          "oklch(96.0% 0.027 156.3)"
+        ]
+      },
+      "warning-soft": {
+        "role": "status",
+        "displayName": "Waiting surface",
+        "canonical": "hsl(38 92% 94%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.012 81.5)",
+          "oklch(32.0% 0.019 81.5)",
+          "oklch(43.0% 0.024 81.5)",
+          "oklch(54.0% 0.026 81.5)",
+          "oklch(65.0% 0.025 81.5)",
+          "oklch(76.0% 0.021 81.5)",
+          "oklch(87.0% 0.014 81.5)",
+          "oklch(96.0% 0.006 81.5)"
+        ]
+      },
+      "warning-strong": {
+        "role": "status",
+        "displayName": "Waiting ink",
+        "canonical": "hsl(28 85% 30%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.052 54.1)",
+          "oklch(32.0% 0.083 54.1)",
+          "oklch(43.0% 0.105 54.1)",
+          "oklch(54.0% 0.114 54.1)",
+          "oklch(65.0% 0.110 54.1)",
+          "oklch(76.0% 0.093 54.1)",
+          "oklch(87.0% 0.063 54.1)",
+          "oklch(96.0% 0.029 54.1)"
+        ]
+      },
+      "info-soft": {
+        "role": "status",
+        "displayName": "In progress surface",
+        "canonical": "hsl(195 85% 94%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.010 219.7)",
+          "oklch(32.0% 0.016 219.7)",
+          "oklch(43.0% 0.021 219.7)",
+          "oklch(54.0% 0.022 219.7)",
+          "oklch(65.0% 0.021 219.7)",
+          "oklch(76.0% 0.018 219.7)",
+          "oklch(87.0% 0.012 219.7)",
+          "oklch(96.0% 0.006 219.7)"
+        ]
+      },
+      "info-strong": {
+        "role": "status",
+        "displayName": "In progress ink",
+        "canonical": "hsl(199 90% 28%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.045 237.1)",
+          "oklch(32.0% 0.071 237.1)",
+          "oklch(43.0% 0.090 237.1)",
+          "oklch(54.0% 0.098 237.1)",
+          "oklch(65.0% 0.094 237.1)",
+          "oklch(76.0% 0.080 237.1)",
+          "oklch(87.0% 0.054 237.1)",
+          "oklch(96.0% 0.025 237.1)"
+        ]
+      },
+      "danger-soft": {
+        "role": "status",
+        "displayName": "Blocked surface",
+        "canonical": "hsl(354 78% 95%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.010 10.6)",
+          "oklch(32.0% 0.016 10.6)",
+          "oklch(43.0% 0.020 10.6)",
+          "oklch(54.0% 0.022 10.6)",
+          "oklch(65.0% 0.021 10.6)",
+          "oklch(76.0% 0.018 10.6)",
+          "oklch(87.0% 0.012 10.6)",
+          "oklch(96.0% 0.005 10.6)"
+        ]
+      },
+      "danger-strong": {
+        "role": "status",
+        "displayName": "Blocked ink",
+        "canonical": "hsl(354 75% 40%)",
+        "tonalRamp": [
+          "oklch(22.0% 0.084 23.4)",
+          "oklch(32.0% 0.134 23.4)",
+          "oklch(43.0% 0.170 23.4)",
+          "oklch(54.0% 0.184 23.4)",
+          "oklch(65.0% 0.178 23.4)",
+          "oklch(76.0% 0.150 23.4)",
+          "oklch(87.0% 0.101 23.4)",
+          "oklch(96.0% 0.046 23.4)"
+        ]
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Page title",
-        "purpose": "One workspace h1."
+        "purpose": "One h1 per screen."
       },
       "headline": {
         "displayName": "Section title",
-        "purpose": "Meaningful section or drawer heading."
+        "purpose": "Sections and drawers."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Readable forms, records and instructions."
+        "purpose": "Instructions, forms, tables."
       },
       "label": {
-        "displayName": "Field label",
-        "purpose": "Persistent, sentence-case control labels."
+        "displayName": "Label",
+        "purpose": "Field and control labels."
       },
       "metadata": {
         "displayName": "Metadata",
-        "purpose": "Short secondary information only."
+        "purpose": "Short secondary facts."
       }
     },
     "shadows": [
       {
-        "name": "legacy-admin-card",
-        "value": "0 2px 6px -1px hsl(230 30% 15% / 0.04), 0 1px 2px -1px hsl(230 30% 15% / 0.03)",
-        "purpose": "Existing .admin-card compatibility treatment, not required on every panel."
-      },
-      {
-        "name": "soft",
-        "value": "0 2px 14px -4px hsl(220 30% 15% / 0.06)",
-        "purpose": "Existing soft floating-surface token."
-      },
-      {
-        "name": "card",
-        "value": "0 12px 40px -12px hsl(220 30% 15% / 0.1)",
-        "purpose": "Existing overlay elevation token."
+        "name": "overlay",
+        "value": "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
+        "purpose": "Dialogs, drawers, menus, popovers and toasts only."
       }
     ],
     "motion": [
       {
         "name": "feedback",
-        "value": "150ms",
-        "purpose": "Ordinary control feedback; avoid decorative entrance motion."
+        "value": "150ms ease-out",
+        "purpose": "Hover, focus, pressed, menus and popovers."
+      },
+      {
+        "name": "overlay",
+        "value": "200ms ease-out",
+        "purpose": "Dialog, toast and accordion."
+      },
+      {
+        "name": "drawer",
+        "value": "250ms ease-out",
+        "purpose": "Sheet open; close is shorter."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "Movement, zoom and smooth scrolling stop."
       }
     ],
     "breakpoints": [
@@ -144,94 +377,147 @@
   },
   "components": [
     {
-      "name": "Primary action",
+      "name": "Primary button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Primary action using the existing shared control scale.",
-      "html": "<button class=\"ds-control ds-primary\">Lưu kế hoạch</button>",
-      "css": ".ds-control{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;font-size:14px;font-weight:500;line-height:20px;border-radius:12px;padding:8px 16px;min-height:40px;cursor:pointer;transition:background-color 150ms,color 150ms}.ds-control:focus-visible{outline:2px solid hsl(var(--ring,354 84% 57%));outline-offset:2px}.ds-control:disabled{opacity:.5;pointer-events:none}.ds-primary{border:1px solid transparent;background:hsl(var(--primary,354 84% 43%));color:hsl(var(--primary-foreground,0 0% 100%))}.ds-primary:hover{background:hsl(var(--primary,354 84% 43%) / .9)}"
+      "description": "The one main next action of the active task.",
+      "html": "<button class=\"ds-btn-primary\">Lưu kế hoạch</button>",
+      "css": ".ds-btn-primary{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;font-size:14px;font-weight:500;line-height:20px;height:40px;padding:8px 16px;border-radius:12px;border:0;background:hsl(354 84% 43%);color:#fff;cursor:pointer;transition:background-color 150ms ease-out,color 150ms ease-out}.ds-btn-primary:hover{background:hsl(354 84% 38%)}.ds-btn-primary:focus-visible{outline:2px solid hsl(354 84% 57%);outline-offset:2px}@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}"
     },
     {
-      "name": "Secondary outline action",
+      "name": "Outline button",
       "kind": "button",
       "refersTo": "button-outline",
-      "description": "Secondary outline action using the existing shared control scale.",
-      "html": "<button class=\"ds-control ds-outline\">Hủy</button>",
-      "css": ".ds-control{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;font-size:14px;font-weight:500;line-height:20px;border-radius:12px;padding:8px 16px;min-height:40px;cursor:pointer;transition:background-color 150ms,color 150ms}.ds-control:focus-visible{outline:2px solid hsl(var(--ring,354 84% 57%));outline-offset:2px}.ds-control:disabled{opacity:.5;pointer-events:none}.ds-outline{border:1px solid hsl(var(--input,220 15% 90%));background:hsl(var(--background,0 0% 100%));color:hsl(var(--foreground,222 25% 12%))}.ds-outline:hover{background:hsl(var(--accent,220 25% 96%))}"
+      "description": "Secondary actions.",
+      "html": "<button class=\"ds-btn-outline\">Kiểm tra lại</button>",
+      "css": ".ds-btn-outline{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;font-size:14px;font-weight:500;line-height:20px;height:40px;padding:8px 16px;border-radius:12px;border:1px solid hsl(220 15% 90%);background:#fff;color:hsl(222 25% 12%);cursor:pointer;transition:background-color 150ms ease-out,color 150ms ease-out}.ds-btn-outline:hover{background:hsl(220 25% 96%)}.ds-btn-outline:focus-visible{outline:2px solid hsl(354 84% 57%);outline-offset:2px}@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}"
     },
     {
-      "name": "Final destructive decision",
+      "name": "Final destructive button",
       "kind": "button",
       "refersTo": "button-destructive",
-      "description": "Final destructive decision using the existing shared control scale.",
-      "html": "<button class=\"ds-control ds-destructive\">Xóa vĩnh viễn</button>",
-      "css": ".ds-control{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;font-size:14px;font-weight:500;line-height:20px;border-radius:12px;padding:8px 16px;min-height:40px;cursor:pointer;transition:background-color 150ms,color 150ms}.ds-control:focus-visible{outline:2px solid hsl(var(--ring,354 84% 57%));outline-offset:2px}.ds-control:disabled{opacity:.5;pointer-events:none}.ds-destructive{border:1px solid transparent;background:hsl(var(--destructive,354 68% 34%));color:hsl(var(--destructive-foreground,0 0% 100%))}.ds-destructive:hover{background:hsl(var(--destructive,354 68% 34%) / .9)}"
-    },
-    {
-      "name": "Labelled field",
-      "kind": "input",
-      "refersTo": "input",
-      "description": "A persistent label and visible focus using shared input dimensions.",
-      "html": "<div class=\"ds-field\"><label for=\"ds-project\">Dự án</label><input id=\"ds-project\" placeholder=\"Tìm theo mã hoặc tên dự án\" /></div>",
-      "css": ".ds-field{font:14px/20px \"Be Vietnam Pro\",Inter,system-ui,sans-serif;display:grid;gap:6px;color:hsl(var(--foreground,222 25% 12%))}.ds-field input{box-sizing:border-box;width:100%;min-height:40px;border:1px solid hsl(var(--input,220 15% 90%));border-radius:12px;background:hsl(var(--background,0 0% 100%));color:inherit;padding:8px 12px;font:inherit}.ds-field input:focus-visible{outline:2px solid hsl(var(--ring,354 84% 57%));outline-offset:2px}"
+      "description": "Only the final, named delete inside its dialog.",
+      "html": "<button class=\"ds-btn-destructive\">Xoá vĩnh viễn hồ sơ</button>",
+      "css": ".ds-btn-destructive{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;font-size:14px;font-weight:500;line-height:20px;height:40px;padding:8px 16px;border-radius:12px;border:0;background:hsl(354 68% 34%);color:#fff;cursor:pointer;transition:background-color 150ms ease-out,color 150ms ease-out}.ds-btn-destructive:hover{background:hsl(354 68% 30%)}.ds-btn-destructive:focus-visible{outline:2px solid hsl(354 84% 57%);outline-offset:2px}@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}"
     },
     {
       "name": "Active navigation",
       "kind": "nav",
-      "refersTo": "nav-item-active",
-      "description": "A quiet selected surface with a written current-page label.",
-      "html": "<nav aria-label=\"Phòng CM\"><a class=\"ds-nav\" href=\"#schedule\" aria-current=\"page\">Tiến độ</a></nav>",
-      "css": ".ds-nav{display:block;border-radius:12px;padding:10px 16px;background:hsl(var(--muted,220 20% 96%));color:hsl(var(--foreground,222 25% 12%));font:600 14px/20px \"Be Vietnam Pro\",Inter,system-ui,sans-serif;text-decoration:none}.ds-nav:hover{background:hsl(var(--accent,220 25% 96%))}.ds-nav:focus-visible{outline:2px solid hsl(var(--ring,354 84% 57%));outline-offset:2px}"
+      "description": "Quiet selected surface with a written label and aria-current.",
+      "html": "<nav><a class=\"ds-nav\" aria-current=\"page\" href=\"#\">Dự án</a></nav>",
+      "css": ".ds-nav{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;display:block;padding:10px 12px;border-radius:12px;font-size:14px;font-weight:500;color:hsl(222 25% 12%);background:hsl(220 20% 96%);text-decoration:none}.ds-nav:focus-visible{outline:2px solid hsl(354 84% 57%);outline-offset:2px}"
     },
     {
-      "name": "Unresolved HSE state",
+      "name": "Text input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labelled field with a format example beside it.",
+      "html": "<label class=\"ds-label\">Mã dự án<input class=\"ds-input\" placeholder=\"PJ-2026-0001\"></label>",
+      "css": ".ds-label{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;display:grid;gap:8px;font-size:14px;font-weight:500}.ds-input{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;height:40px;padding:8px 12px;border:1px solid hsl(220 15% 90%);border-radius:12px;font-size:14px}.ds-input:focus-visible{outline:2px solid hsl(354 84% 57%);outline-offset:2px}"
+    },
+    {
+      "name": "Status pill: done",
       "kind": "chip",
-      "description": "Confirmed HSE remains a warning until the violation is resolved.",
-      "html": "<span class=\"ds-status\">Vi phạm đã xác nhận</span>",
-      "css": ".ds-status{display:inline-block;border-radius:9999px;padding:4px 12px;font:600 12px/16px \"Be Vietnam Pro\",Inter,system-ui,sans-serif;background:hsl(var(--admin-warning-soft,38 92% 94%));color:hsl(28 85% 30%)}"
+      "refersTo": "status-pill-success",
+      "description": "Approved, completed or synchronized. Always words plus tone.",
+      "html": "<span class=\"ds-pill-success\">Đã đồng bộ</span>",
+      "css": ".ds-pill-success{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;display:inline-flex;white-space:nowrap;font-size:12px;font-weight:500;line-height:16px;padding:2px 10px;border-radius:9999px;background:hsl(150 62% 94%);color:hsl(150 62% 28%)}"
     },
     {
-      "name": "Working panel",
+      "name": "Status pill: waiting",
+      "kind": "chip",
+      "refersTo": "status-pill-warning",
+      "description": "Waiting on someone, overdue or needing verification.",
+      "html": "<span class=\"ds-pill-warning\">Chờ duyệt</span>",
+      "css": ".ds-pill-warning{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;display:inline-flex;white-space:nowrap;font-size:12px;font-weight:500;line-height:16px;padding:2px 10px;border-radius:9999px;background:hsl(38 92% 94%);color:hsl(28 85% 30%)}"
+    },
+    {
+      "name": "Record notice",
+      "kind": "custom",
+      "description": "A problem under its record, with the actions that resolve it.",
+      "html": "<div class=\"ds-notice\"><p>Tệp đang ở thùng rác Google Drive. Khôi phục tệp trên Drive rồi bấm Kiểm tra lại.</p><button class=\"ds-notice-btn\">Kiểm tra lại</button></div>",
+      "css": ".ds-notice{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px;border-radius:12px;background:hsl(354 78% 97%);font-size:14px;color:hsl(222 25% 12%)}.ds-notice p{margin:0;max-width:75ch}.ds-notice-btn{height:36px;padding:0 12px;border-radius:12px;border:1px solid hsl(220 15% 90%);background:#fff;cursor:pointer}.ds-notice-btn:focus-visible{outline:2px solid hsl(354 84% 57%);outline-offset:2px}"
+    },
+    {
+      "name": "Work card",
       "kind": "card",
       "refersTo": "card",
-      "description": "One quiet boundary; headings and spacing structure the content.",
-      "html": "<section class=\"ds-panel\"><h2>Tiến độ thi công</h2><p>Chọn dự án để xem kế hoạch và thực tế công trường.</p></section>",
-      "css": ".ds-panel{border:1px solid hsl(var(--border,220 15% 90%));border-radius:16px;padding:16px;background:hsl(var(--card,0 0% 100%));color:hsl(var(--foreground,222 25% 12%));font:14px/20px \"Be Vietnam Pro\",Inter,system-ui,sans-serif}.ds-panel h2{margin:0 0 8px;font-size:18px;font-weight:600;line-height:28px}.ds-panel p{margin:0;color:hsl(var(--muted-foreground,220 9% 40%))}"
+      "description": "Flat record surface: border, no shadow.",
+      "html": "<div class=\"ds-card\"><strong>PJ-2026-0001 · Nhà xưởng</strong><span>Chờ bạn duyệt tiến độ</span></div>",
+      "css": ".ds-card{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;display:grid;gap:4px;padding:16px;border-radius:16px;border:1px solid hsl(220 15% 90%);background:#fff;font-size:14px}.ds-card span{color:hsl(220 9% 40%)}"
     }
   ],
   "narrative": {
-    "northStar": "The Site Office Ledger",
-    "overview": "Nicon is a working system for nontechnical construction staff. Its design must\nhelp someone understand the current project, the state of the work, and the next\nsafe action without a developer explaining the screen. Keep the existing Nicon\nidentity: Vietnamese-first typography, red for the main action, white working\nsurfaces, quiet rules, and readable records.\n\nThe priority order is business correctness, understandable actions, recovery,\naccessibility, then visual refinement. A tidy screen that saves against the wrong\nproject, loses an approval reason, or conceals missing reports is a design failure.\nThe user should be able to answer: **Where am I? What needs attention? What can I\ndo? Did it work?**\n\nThis standard covers authenticated admin screens. Public marketing pages need a\nseparate brief; their gradients, large display typography, and decorative motion\nmust not become defaults for workspaces. `AGENTS.md` and the canonical business\ncontracts take precedence over visual choices. This file is a standard to apply,\nnot a claim that every existing screen already complies.",
+    "northStar": "The Site Handover Log",
+    "overview": "**Creative North Star: \"The Site Handover Log\" (Sổ giao ca công trường)**\n\nA handover log is read at the start of a shift: it says what is waiting, which project it belongs to, who has it and what happens next. Every Nicon admin screen answers the same four questions before anything else: **Where am I? What is waiting for me? What can I do next? Did it work?**\n\nStaff are nontechnical construction people working in Vietnamese first. The screens are bright, flat and legible: white working surfaces on a quiet backdrop, thin rules, Nicon red reserved for the next main action, and a small shared set of status colours that always carry words. Records that need action stand out; finished records stay quiet.\n\nThe voice is clear and friendly. Sentences are short, use construction and Nicon business words, and say what happened and what to do next. No technical jargon, error codes or internal names appear in ordinary screens.\n\nThis standard covers authenticated admin screens. The public website has its own visual language and does not lend it to the workspace. `AGENTS.md` and the business contracts take precedence over visual choices. This file is the standard to apply; it does not claim that every screen already meets it.",
     "keyCharacteristics": [
-      "One visible project context and one page title; related panels share the frame.",
-      "Familiar controls, sentence-case labels, readable data, and restrained colour.",
-      "CM plans and reviews; BCH executes. Both reference the same business records.",
-      "The next permitted action is clear; blocked actions explain their prerequisite.",
-      "Loading, missing data, errors, conflicts, and completed work remain distinct.",
-      "BCH supports phone use; CM supports desktop comparison and keyboard operation."
+      "One project context and one page title; related panels share the frame.",
+      "Waiting and blocked work is more visible than finished work.",
+      "The reason for a state sits beside the action that resolves it.",
+      "Motion confirms what the user just did, and stops when they ask for less.",
+      "Loading, empty, error, success and no-permission states look different.",
+      "BCH works well on a phone; CM supports desktop comparison and the keyboard."
     ],
-    "rules": [],
+    "rules": [
+      {
+        "name": "The One Red Voice Rule",
+        "body": "Each working area has at most one filled red action. Everything else is outline or ghost.",
+        "section": "colors"
+      },
+      {
+        "name": "The Words First Rule",
+        "body": "Remove all colour and every status must still be understood from its label.",
+        "section": "colors"
+      },
+      {
+        "name": "The Same Word, Same Tone Rule",
+        "body": "A lifecycle meaning maps to one tone across modules. Do not assign a colour by matching an English status name; decide what the state means in its own lifecycle. A confirmed HSE violation is still open (warning), not a success.",
+        "section": "colors"
+      },
+      {
+        "name": "The Sentence Case Rule",
+        "body": "No uppercase eyebrows, wide tracking or tiny chips as a second heading system. Existing uppercase utilities are legacy.",
+        "section": "typography"
+      },
+      {
+        "name": "The Never Broken Word Rule",
+        "body": "Names, codes and reasons wrap at spaces or hyphens. A column too narrow for that is the defect: merge reference data into one metadata line or switch to stacked cards.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Work Surface Rule",
+        "body": "No shadow, glow, gradient, hover lift or blur on cards, rows, forms or buttons. The translucent sticky top bar is the only blur.",
+        "section": "elevation"
+      },
+      {
+        "name": "The No Nested Cards Rule",
+        "body": "Express subsections with headings, rows and separators.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Reduced Motion Rule",
+        "body": "Under `prefers-reduced-motion: reduce`, movement, zoom and smooth scrolling stop and changes happen at once. This is one global rule, not something each screen remembers. A busy spinner may keep turning.",
+        "section": "components"
+      }
+    ],
     "dos": [
-      "Do make project, record, state and next permitted action visible together.",
-      "Do retain Nicon's type, red accent and semantic tokens through shared components.",
-      "Do use one page frame, sentence-case labels, readable help and accessible focus.",
-      "Do validate dependent IDs whenever the selected project changes.",
-      "Do keep input and decision reasons until the server confirms success.",
-      "Do apply status meaning by lifecycle, with words as well as colour.",
-      "Do check real content at phone, tablet and desktop widths and 200% zoom.",
-      "Do verify keyboard flow, all supported languages, and real error/retry paths.",
-      "Do follow server authorization, independent-review and deletion-impact contracts."
+      "**Do** show project, record, state and next permitted action together.",
+      "**Do** put waiting, overdue and blocked work where the eye lands first.",
+      "**Do** explain a blocked action: the reason and the step that unblocks it.",
+      "**Do** say what is true: a file waiting for Google Drive is not synchronized, a lost file is not \"synced\", missing actual progress is not 0%, a draft plan is not a published baseline.",
+      "**Do** keep typed input and decision reasons until the server confirms success.",
+      "**Do** write short, friendly Vietnamese first, with keys in all four languages.",
+      "**Do** check real content at 390, 768, 1024 and 1440px, at 200% zoom, with the keyboard, and with reduced motion on.",
+      "**Do** follow the server's authorization, independent-review and deletion-impact contracts: permanent deletion shows impact, blockers and file consequences and asks for the record code (`AGENTS.md`, Hard-delete policy)."
     ],
     "donts": [
-      "Don't invent extra records, formulas, claims or counts to make a dashboard look complete.",
-      "Don't make documentation claims of accessibility or business readiness from styling alone.",
-      "Don't use nested cards, gradients, glow or animated entrances as the structure of a work screen.",
-      "Don't replace clear business names with internal IDs, abbreviations or raw JSON.",
-      "Don't hide critical names, reasons or prerequisites behind truncation or tooltips alone.",
-      "Don't turn every approve button into the page's dominant red action.",
-      "Don't close a dialog after a failed operation or silently reset a user's work.",
-      "Don't treat a generic confirmation as authorization for permanent deletion.",
-      "Don't call a chart, list or state complete while its source data is missing or truncated."
+      "**Don't** hard-code status colours or use raw palette classes.",
+      "**Don't** use colour alone, or a tooltip or truncation alone, to carry a name, reason or prerequisite.",
+      "**Don't** make a row-level delete the loudest thing in a row.",
+      "**Don't** replace business names with internal IDs, abbreviations or raw JSON.",
+      "**Don't** invent records, formulas or counts to fill a dashboard, or call a list or chart complete when data is missing or truncated.",
+      "**Don't** close a dialog after a failed action or reset the user's work.",
+      "**Don't** add gradients, glow, nested cards or entrance animation to work screens."
     ]
   }
 }
