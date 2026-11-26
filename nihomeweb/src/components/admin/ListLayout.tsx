@@ -107,7 +107,7 @@ export function ListTabs<T extends string>({
 export function statusTabs<T extends string>(
   allLabel: string,
   statuses: readonly T[],
-  counts: Record<string, number>,
+  counts: Record<string, number> | null,
   selected: T | "",
   labelOf: (status: T) => string,
 ): ListTab<T | "">[] {
@@ -115,11 +115,15 @@ export function statusTabs<T extends string>(
     {
       value: "",
       label: allLabel,
-      count: Object.values(counts).reduce((sum, value) => sum + value, 0),
+      count: counts ? Object.values(counts).reduce((sum, value) => sum + value, 0) : undefined,
     },
     ...statuses
-      .filter((status) => (counts[status] ?? 0) > 0 || status === selected)
-      .map((status) => ({ value: status, label: labelOf(status), count: counts[status] ?? 0 })),
+      .filter((status) => (counts?.[status] ?? 0) > 0 || status === selected)
+      .map((status) => ({
+        value: status,
+        label: labelOf(status),
+        count: counts ? (counts[status] ?? 0) : undefined,
+      })),
   ];
 }
 

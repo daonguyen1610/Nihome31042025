@@ -446,8 +446,10 @@ export default function UserList() {
                               type="button"
                               variant="ghost"
                               size="icon"
-                              onClick={() => openEdit(user)}
-                              disabled={disabled}
+                              onClick={() => {
+                                if (!disabled) void openEdit(user);
+                              }}
+                              aria-disabled={disabled}
                               title={t("common.edit")}
                               aria-label={t("common.edit")}
                             >
@@ -478,7 +480,7 @@ export default function UserList() {
 
                 {/* Desktop table (lg+) */}
                 <div className="hidden overflow-x-auto rounded-lg border xl:block">
-                  <table className="min-w-[900px] w-full divide-y text-sm">
+                  <table className="w-full divide-y text-sm">
                     <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                       <tr>
                         <th className="w-10 px-3 py-3 text-left">
@@ -495,10 +497,6 @@ export default function UserList() {
                           />
                         </th>
                         <th className="px-3 py-3 text-left font-medium">{t("adminUsers.user")}</th>
-                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                          {t("adminUsers.phoneNumber")}
-                        </th>
-                        <th className="px-3 py-3 text-left font-medium">{t("adminUsers.email")}</th>
                         <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
                           {t("adminUsers.role")}
                         </th>
@@ -538,16 +536,15 @@ export default function UserList() {
                                   )}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="truncate font-medium">
+                                  <p className="font-medium">
                                     {user.fullName ?? t("adminUsers.unnamed")}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                                    {[user.phoneNumber, user.email].filter(Boolean).join(" · ")}
                                   </p>
                                 </div>
                               </div>
                             </td>
-                            <td className="whitespace-nowrap px-3 py-3 font-medium">
-                              {user.phoneNumber}
-                            </td>
-                            <td className="px-3 py-3">{user.email ?? "—"}</td>
                             <td className="whitespace-nowrap px-3 py-3">
                               <Badge
                                 variant="outline"
@@ -585,8 +582,10 @@ export default function UserList() {
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => openEdit(user)}
-                                  disabled={disabled}
+                                  onClick={() => {
+                                    if (!disabled) void openEdit(user);
+                                  }}
+                                  aria-disabled={disabled}
                                   title={t("common.edit")}
                                   aria-label={t("common.edit")}
                                 >

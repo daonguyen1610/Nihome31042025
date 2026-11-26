@@ -759,7 +759,7 @@ const AdminSurveys = () => {
         ) : (
           <>
             {/* Mobile / tablet card view */}
-            <div className="grid gap-3 lg:hidden">
+            <div className="grid gap-3 xl:hidden">
               {rows.map((r) => {
                 const canDelete = canManage;
                 return (
@@ -833,7 +833,7 @@ const AdminSurveys = () => {
             </div>
 
             {/* Desktop table */}
-            <div className="hidden overflow-x-auto rounded-lg border border-border bg-card shadow-sm lg:block">
+            <div className="hidden overflow-x-auto rounded-lg border border-border bg-card shadow-sm xl:block">
               <table className="min-w-full text-sm">
                 <thead className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>

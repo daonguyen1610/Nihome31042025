@@ -735,7 +735,7 @@ export const SiteDiaryPanel = ({ designProjectId, scope }: DesignProjectScopePro
                         <Checkbox
                           checked={selected.has(row.id)}
                           onCheckedChange={(v) => toggleSelect(row.id, !!v)}
-                          aria-label={`m-select-${row.id}`}
+                          aria-label={`${t("common.selectItem")} · ${row.diaryDate.slice(0, 10)}`}
                           className="mt-1"
                         />
                       </div>
@@ -841,7 +841,7 @@ export const SiteDiaryPanel = ({ designProjectId, scope }: DesignProjectScopePro
                             <Checkbox
                               checked={selected.has(row.id)}
                               onCheckedChange={(v) => toggleSelect(row.id, !!v)}
-                              aria-label={`select-${row.id}`}
+                              aria-label={`${t("common.selectItem")} · ${row.diaryDate.slice(0, 10)}`}
                             />
                           </td>
                         )}

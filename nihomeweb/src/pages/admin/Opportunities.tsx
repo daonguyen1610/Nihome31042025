@@ -204,8 +204,11 @@ const AdminOpportunities = () => {
   const [pipelineLoading, setPipelineLoading] = useState(false);
 
   const [page, setPage] = useState(1);
-  const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
-  const tabCount = Object.values(tabCounts).reduce((sum, value) => sum + value, 0);
+  // null until the first response: a count that is not known yet must not read as zero.
+  const [tabCounts, setTabCounts] = useState<Record<string, number> | null>(null);
+  const tabCount = tabCounts
+    ? Object.values(tabCounts).reduce((sum, value) => sum + value, 0)
+    : undefined;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 20;
 
@@ -828,9 +831,9 @@ const AdminOpportunities = () => {
       <div className="space-y-6">
         <PageHeader
           title={t("opportunities.title")}
-          count={tabCount}
+          count={view === "table" ? tabCount : undefined}
           description={
-            canSeeAll
+            canSeeAll || !tabCounts
               ? t("opportunities.subtitle")
               : t("opportunities.myScopeCount").replace("{count}", total.toString())
           }
@@ -839,17 +842,17 @@ const AdminOpportunities = () => {
               <div className="flex rounded-md border overflow-hidden">
                 <button
                   type="button"
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm ${view === "table" ? "bg-muted" : ""}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm pointer-coarse:min-h-11 ${view === "table" ? "bg-muted" : ""}`}
                   onClick={() => setView("table")}
-                  aria-label={t("opportunities.viewToggle.table")}
+                  aria-pressed={view === "table"}
                 >
                   <List className="h-4 w-4" /> {t("opportunities.viewToggle.table")}
                 </button>
                 <button
                   type="button"
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border-l ${view === "pipeline" ? "bg-muted" : ""}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm pointer-coarse:min-h-11 border-l ${view === "pipeline" ? "bg-muted" : ""}`}
                   onClick={() => setView("pipeline")}
-                  aria-label={t("opportunities.viewToggle.pipeline")}
+                  aria-pressed={view === "pipeline"}
                 >
                   <LayoutGrid className="h-4 w-4" /> {t("opportunities.viewToggle.pipeline")}
                 </button>
@@ -883,36 +886,40 @@ const AdminOpportunities = () => {
           />
         )}
 
-        <ListTabs
-          label={t("opportunities.filter.stage")}
-          tabs={statusTabs(t("common.all"), OPPORTUNITY_STAGES, tabCounts, stageFilter, (value) =>
-            t(`opportunities.stage.${value}`),
-          )}
-          value={stageFilter}
-          onChange={(next) => {
-            setStageFilter(next);
-            setPage(1);
-          }}
-        />
+        {view === "table" && (
+          <ListTabs
+            label={t("opportunities.filter.stage")}
+            tabs={statusTabs(t("common.all"), OPPORTUNITY_STAGES, tabCounts, stageFilter, (value) =>
+              t(`opportunities.stage.${value}`),
+            )}
+            value={stageFilter}
+            onChange={(next) => {
+              setStageFilter(next);
+              setPage(1);
+            }}
+          />
+        )}
         <ListPanel
           search={
-            <>
-              <div className="md:col-span-2">
-                <Label className="sr-only" htmlFor="opportunity-search">
-                  {t("opportunities.filter.search")}
-                </Label>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="opportunity-search"
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    placeholder={t("opportunities.searchPlaceholder")}
-                    className="pl-9"
-                  />
+            view === "table" && (
+              <>
+                <div className="md:col-span-2">
+                  <Label className="sr-only" htmlFor="opportunity-search">
+                    {t("opportunities.filter.search")}
+                  </Label>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="opportunity-search"
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      placeholder={t("opportunities.searchPlaceholder")}
+                      className="pl-9"
+                    />
+                  </div>
                 </div>
-              </div>
-            </>
+              </>
+            )
           }
           filterCount={
             [customerFilter !== "", minValue !== "", maxValue !== ""].filter(Boolean).length
@@ -920,8 +927,7 @@ const AdminOpportunities = () => {
           filtersOpen={filtersOpen}
           onFiltersOpenChange={setFiltersOpen}
           onClear={
-            searchInput !== "" ||
-            stageFilter !== "" ||
+            (view === "table" && (searchInput !== "" || stageFilter !== "")) ||
             [customerFilter !== "", minValue !== "", maxValue !== ""].some(Boolean)
               ? () => {
                   setSearchInput("");

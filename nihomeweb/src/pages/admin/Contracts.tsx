@@ -614,9 +614,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     {
       value: "overdue",
       label: t(
-        mode === "downstream"
-          ? "contracts.summary.overduePayment"
-          : "contracts.summary.overdueCollection",
+        mode === "all"
+          ? "contracts.quickView.overdue"
+          : mode === "downstream"
+            ? "contracts.summary.overduePayment"
+            : "contracts.summary.overdueCollection",
       ),
       count: tabCounts.overdue,
       urgent: true,
@@ -1317,7 +1319,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           tools={
             <ColumnMenu
               columns={[
-                { id: "dates", label: t("contracts.field.endDate") },
+                {
+                  id: "dates",
+                  label: `${t("contracts.field.signedDate")} / ${t("contracts.field.endDate")}`,
+                },
                 { id: "value", label: t("contracts.field.currentValue") },
                 ...(mode !== "all"
                   ? [

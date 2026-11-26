@@ -825,7 +825,7 @@ export default function RoleList() {
                                             {translatedDescription}
                                           </span>
                                         )}
-                                        <span className="mt-1.5 block break-all font-mono text-xs text-muted-foreground/80">
+                                        <span className="mt-1.5 block break-all font-mono text-xs text-muted-foreground">
                                           {permission.code}
                                         </span>
                                       </span>
