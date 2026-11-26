@@ -323,7 +323,7 @@ export default function VendorPage() {
           <PageEmpty message={t("proc.vendors.empty")} />
         ) : (
           <>
-            <div className="hidden overflow-x-auto rounded-xl border bg-card shadow-sm lg:block">
+            <div className="hidden overflow-x-auto rounded-xl border bg-card shadow-sm xl:block">
               <table className="w-full min-w-[820px] text-sm">
                 <thead className="bg-muted/60 text-left">
                   <tr>
@@ -436,7 +436,7 @@ export default function VendorPage() {
                 </tbody>
               </table>
             </div>
-            <div className="grid gap-3 lg:hidden">
+            <div className="grid gap-3 xl:hidden">
               {rows.map((vendor) => (
                 <article
                   key={vendor.id}

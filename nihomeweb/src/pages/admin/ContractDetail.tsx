@@ -665,7 +665,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
     <AdminLayout>
       <div className="space-y-4">
         {isFinanceWorkspace && (
-          <div className="flex flex-col gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 rounded-lg border border-info/40 bg-info-soft px-4 py-3 text-sm text-info-strong sm:flex-row sm:items-center sm:justify-between">
             <p>{t("contracts.finance.masterManagedElsewhere")}</p>
             {has(ADMIN_PERMS.contracts) && (
               <Button asChild variant="outline" size="sm" className="shrink-0 bg-card">

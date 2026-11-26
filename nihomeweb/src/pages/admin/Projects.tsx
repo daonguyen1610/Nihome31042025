@@ -31,12 +31,12 @@ import { resolveCategoryLabel } from "@/lib/category";
 
 const PROJECT_STATUS_STYLES = {
   ongoing: "border-warning/40 bg-warning-soft text-warning-strong",
-  completed: "border-green-300 bg-green-100 text-green-800",
+  completed: "border-success/40 bg-success-soft text-success-strong",
 } as const;
 
 const PROJECT_STATUS_DOT = {
-  ongoing: "bg-amber-500",
-  completed: "bg-green-600",
+  ongoing: "bg-warning",
+  completed: "bg-success",
 } as const;
 
 const AdminProjects = () => {
@@ -149,7 +149,7 @@ const AdminProjects = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t("nav.websiteProjects")}</h1>

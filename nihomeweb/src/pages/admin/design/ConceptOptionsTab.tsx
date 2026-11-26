@@ -61,8 +61,8 @@ import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const STATUS_BADGE: Record<ConceptOptionStatus, string> = {
   Drafting: "border-info/30 bg-info-soft text-info-strong",
-  PendingInternalReview: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  PresentedToClient: "border-violet-200 bg-violet-50 text-violet-700",
+  PendingInternalReview: "border-info/40 bg-info-soft text-info-strong",
+  PresentedToClient: "border-info/40 bg-info-soft text-info-strong",
   ClientRequestedChanges: "border-warning/40 bg-warning-soft text-warning-strong",
   Finalized: "border-success/30 bg-success-soft text-success-strong",
   Discarded: "border-border bg-muted/30 text-muted-foreground",
@@ -365,7 +365,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
       {error ? (
         <div
           role="alert"
-          className="rounded-lg border border-destructive/20 bg-rose-50/60 p-4 text-sm text-destructive"
+          className="rounded-lg border border-destructive/20 bg-danger-soft/60 p-4 text-sm text-destructive"
         >
           <p>{error}</p>
           <Button className="mt-2 min-h-11" variant="outline" onClick={() => void refreshRows()}>
@@ -413,7 +413,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
               key={row.id}
               className={cn(
                 "min-w-0 rounded-lg border bg-card p-4 shadow-sm",
-                row.status === "Finalized" && "border-emerald-300 ring-1 ring-emerald-200",
+                row.status === "Finalized" && "border-success/40 ring-1 ring-emerald-200",
                 row.status === "Discarded" && "border-border bg-muted/40",
               )}
             >
@@ -666,7 +666,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busyFinalize}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-success hover:bg-success"
               onClick={(e) => {
                 e.preventDefault();
                 void confirmFinalize();
@@ -729,7 +729,7 @@ const RowActions = ({
           {canFinalize ? (
             <Button
               size="sm"
-              className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")}
+              className={cn(btn, "bg-success hover:bg-success")}
               onClick={(event) => onFinalize(event.currentTarget)}
               disabled={busy || !finalizeReady}
               aria-describedby={!finalizeReady ? `concept-finalize-hint-${row.id}` : undefined}
@@ -770,7 +770,7 @@ const RowActions = ({
         <Button
           size="sm"
           variant="ghost"
-          className={cn(btn, "text-destructive hover:bg-destructive/10 hover:text-rose-800")}
+          className={cn(btn, "text-destructive hover:bg-destructive/10 hover:text-danger-strong")}
           onClick={onDelete}
         >
           <Trash2 className="mr-1 h-3.5 w-3.5" />

@@ -320,10 +320,10 @@ export default function TenderEstimatePanel({
             className="mt-3 rounded-md border border-warning/40 bg-warning-soft p-3"
             data-testid="tender-readiness-blockers"
           >
-            <div className="text-sm font-medium text-amber-950">
+            <div className="text-sm font-medium text-warning-strong">
               {t("tenders.lifecycle.blockersTitle")}
             </div>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-900">
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-warning-strong">
               {readiness.blockers.map((blocker) => (
                 <li key={`${blocker.code}-${blocker.message}`}>{blocker.message}</li>
               ))}
@@ -443,7 +443,7 @@ export default function TenderEstimatePanel({
             className="mt-3 rounded-md border border-destructive/20 bg-destructive/10 p-3"
             role="alert"
           >
-            <p className="font-medium text-rose-800">{t("tenders.estimate.importErrors")}</p>
+            <p className="font-medium text-danger-strong">{t("tenders.estimate.importErrors")}</p>
             <ul className="mt-1 space-y-1 text-sm text-destructive">
               {importErrors.map((error, index) => (
                 <li key={`${error.row}-${error.column}-${index}`}>
@@ -578,7 +578,7 @@ export default function TenderEstimatePanel({
                           </Button>
                           <Button
                             size="sm"
-                            variant="destructive"
+                            variant="destructiveOutline"
                             disabled={busy}
                             onClick={() => void decide("reject")}
                           >

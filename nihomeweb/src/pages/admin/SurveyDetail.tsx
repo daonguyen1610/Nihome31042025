@@ -291,7 +291,7 @@ const AdminSurveyDetail = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-3 md:p-4">
+      <div className="space-y-4">
         <Link
           to="/admin/surveys"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -317,7 +317,7 @@ const AdminSurveyDetail = () => {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <ClipboardList className="h-5 w-5 shrink-0 text-muted-foreground" />
-                    <h1 className="text-xl font-bold text-foreground md:text-2xl">{survey.code}</h1>
+                    <h1 className="text-foreground text-2xl font-semibold">{survey.code}</h1>
                     <SurveyStatusBadge survey={survey} />
                     <DriveStatusBadge
                       status={survey.driveSyncStatus}
@@ -358,7 +358,7 @@ const AdminSurveyDetail = () => {
               {surveyProgress(survey, todayIsoDate()) === "overdue" ? (
                 <p
                   role="status"
-                  className="mt-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-amber-900"
+                  className="mt-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning-strong"
                 >
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                   {t(

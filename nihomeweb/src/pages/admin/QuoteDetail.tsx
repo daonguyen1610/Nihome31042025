@@ -113,10 +113,10 @@ const STATUS_STYLES: Record<QuoteStatus, string> = {
   PendingApproval: "border-warning/40 bg-warning-soft text-warning-strong",
   Approved: "border-success/30 bg-success-soft text-success-strong",
   SentToCustomer: "border-info/30 bg-info-soft text-info-strong",
-  CustomerApproved: "border-green-300 bg-green-100 text-green-800",
+  CustomerApproved: "border-success/40 bg-success-soft text-success-strong",
   Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
-  Expired: "border-orange-200 bg-orange-50 text-orange-700",
-  Cancelled: "border-zinc-200 bg-zinc-100 text-zinc-600",
+  Expired: "border-warning/40 bg-warning-soft text-warning-strong",
+  Cancelled: "border-border bg-muted text-muted-foreground",
 };
 
 type WorkflowKind =
@@ -1183,7 +1183,7 @@ const AdminQuoteDetail = () => {
       )}
 
       {awaitingInputPrice && !editing && (
-        <div className="mb-4 rounded-lg border border-warning/40 bg-warning-soft p-4 text-sm text-amber-950">
+        <div className="mb-4 rounded-lg border border-warning/40 bg-warning-soft p-4 text-sm text-warning-strong">
           {t(
             inputOffersUnavailable
               ? "quotes.inputPrice.unavailable"

@@ -438,7 +438,7 @@ const MaterialRequestDetailPage = () => {
                   {t("procurement.action.approve")}
                 </Button>
                 <Button
-                  variant="destructive"
+                  variant="destructiveOutline"
                   onClick={() => {
                     setReason("");
                     setFormError(null);
@@ -644,7 +644,7 @@ const MaterialRequestDetailPage = () => {
               ))}
             </ol>
             {request.decisionReason && (
-              <div className="border-l-2 border-rose-400 pl-3">
+              <div className="border-l-2 border-danger/40 pl-3">
                 <p className="text-xs font-medium text-muted-foreground">
                   {t("procurement.field.decisionReason")}
                 </p>

@@ -122,7 +122,7 @@ const statusClass: Record<string, string> = {
   UnderValidation: "border-info/30 bg-info-soft text-info-strong",
   ReadyForApproval: "border-warning/40 bg-warning-soft text-warning-strong",
   Approved: "border-success/30 bg-success-soft text-success-strong",
-  Paid: "border-emerald-300 bg-emerald-100 text-success-strong",
+  Paid: "border-success/40 bg-success-soft text-success-strong",
   Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
   Cancelled: "border-border bg-muted/30 text-muted-foreground",
   Open: "border-info/30 bg-info-soft text-info-strong",

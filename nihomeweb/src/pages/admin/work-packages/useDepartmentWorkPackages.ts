@@ -116,10 +116,10 @@ const emptyOptions: DepartmentWorkPackageOptionsResponse = {
 };
 const TASK_FILE_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg"];
 const statusTone: Record<WorkPackageStatus, string> = {
-  Planned: "border-sky-200 bg-sky-50 text-sky-700",
-  Active: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Completed: "border-border bg-muted/30 text-foreground",
-  Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+  Planned: "border-border bg-muted text-foreground",
+  Active: "border-info/40 bg-info-soft text-info-strong",
+  Completed: "border-success/40 bg-success-soft text-success-strong",
+  Cancelled: "border-border bg-muted text-muted-foreground",
 };
 
 export function useDepartmentWorkPackages() {

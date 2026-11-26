@@ -65,6 +65,23 @@ export interface KpiDashboardProps {
   mode?: "evaluation" | "configuration";
 }
 
+/** The stored snapshot as facts a manager can read: how many records, and why none. */
+const KpiEvidence = ({ json }: { json: string }) => {
+  const { t } = useI18n();
+  let evidence: { RecordIds?: unknown[]; Reason?: string | null } = {};
+  try {
+    evidence = JSON.parse(json) ?? {};
+  } catch {
+    return <p className="mt-1">—</p>;
+  }
+  return (
+    <p className="mt-1 max-w-sm">
+      {t("kpi.evidenceRecords", { count: evidence.RecordIds?.length ?? 0 })}
+      {evidence.Reason ? ` · ${evidence.Reason}` : ""}
+    </p>
+  );
+};
+
 const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
   const uiError = useUiError();
   const { t, lang } = useI18n();
@@ -383,9 +400,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                             {t(score.nameKey)}
                             <details className="mt-1 font-normal text-xs text-muted-foreground">
                               <summary className="cursor-pointer">{t("kpi.evidence")}</summary>
-                              <pre className="mt-1 max-w-sm whitespace-pre-wrap break-all">
-                                {score.evidenceJson}
-                              </pre>
+                              <KpiEvidence json={score.evidenceJson} />
                             </details>
                           </td>
                           <td className="px-3 py-3">{score.sourceModule}</td>
@@ -442,16 +457,16 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                   key={item.roleCode}
                   className={`flex min-h-40 flex-col rounded-md border p-3 shadow-sm ${
                     item.ready
-                      ? "border-success/30 bg-emerald-50/40"
-                      : "border-warning/40 bg-amber-50/40"
+                      ? "border-success/30 bg-success-soft/40"
+                      : "border-warning/40 bg-warning-soft/40"
                   }`}
                 >
                   <div>
                     <span
                       className={`flex h-8 w-8 items-center justify-center rounded-md ${
                         item.ready
-                          ? "bg-emerald-100 text-success-strong"
-                          : "bg-amber-100 text-warning-strong"
+                          ? "bg-success-soft text-success-strong"
+                          : "bg-warning-soft text-warning-strong"
                       }`}
                     >
                       {item.ready ? (
@@ -472,7 +487,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                   </p>
                   <div className="mb-3 mt-2 h-1.5 overflow-hidden rounded-full bg-card/80">
                     <div
-                      className={`h-full rounded-full ${item.ready ? "bg-emerald-500" : "bg-amber-500"}`}
+                      className={`h-full rounded-full ${item.ready ? "bg-success" : "bg-warning"}`}
                       style={{ width: `${Math.min(Math.max(item.weight * 100, 0), 100)}%` }}
                     />
                   </div>

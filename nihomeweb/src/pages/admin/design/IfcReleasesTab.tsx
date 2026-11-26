@@ -432,7 +432,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
   }
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/20 bg-rose-50/60 p-4 text-sm text-destructive">
+      <div className="rounded-lg border border-destructive/20 bg-danger-soft/60 p-4 text-sm text-destructive">
         {error}
       </div>
     );
@@ -806,7 +806,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
                 ) : null}
                 {isDraft && canRelease ? (
                   <Button
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="bg-success hover:bg-success"
                     onClick={() => setReleaseConfirmOpen(true)}
                     disabled={
                       busy || selected.items.length === 0 || selected.recipients.length === 0
@@ -887,7 +887,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-success hover:bg-success"
               onClick={(e) => {
                 e.preventDefault();
                 void doRelease();

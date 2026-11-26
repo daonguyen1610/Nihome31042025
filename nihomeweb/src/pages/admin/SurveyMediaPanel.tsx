@@ -844,7 +844,7 @@ export default function SurveyMediaPanel({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-destructive hover:text-rose-800"
+                        className="text-destructive hover:text-danger-strong"
                         onClick={() => setDeleting(media)}
                         disabled={busyMediaId === media.id}
                       >
@@ -1007,7 +1007,7 @@ export default function SurveyMediaPanel({
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-rose-600 hover:bg-rose-700"
+              className="bg-destructive hover:bg-destructive"
               onClick={() => void confirmDelete()}
             >
               {t("surveys.media.delete")}

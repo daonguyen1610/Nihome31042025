@@ -560,10 +560,10 @@ const AdminSurveys = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-3 md:p-4">
+      <div className="space-y-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-bold text-foreground md:text-2xl">{t("surveys.title")}</h1>
+            <h1 className="text-foreground text-2xl font-semibold">{t("surveys.title")}</h1>
             <p className="text-sm text-muted-foreground">{t("surveys.subtitle")}</p>
           </div>
           {canManage ? (
@@ -818,7 +818,7 @@ const AdminSurveys = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-destructive hover:bg-destructive/10 hover:text-rose-800"
+                            className="text-destructive hover:bg-destructive/10 hover:text-danger-strong"
                             onClick={() => void openDelete(r)}
                           >
                             <Trash2 className="mr-1 h-3.5 w-3.5" />
@@ -900,7 +900,7 @@ const AdminSurveys = () => {
                                 aria-label={t("common.delete")}
                                 variant="ghost"
                                 size="sm"
-                                className="text-destructive hover:bg-destructive/10 hover:text-rose-800"
+                                className="text-destructive hover:bg-destructive/10 hover:text-danger-strong"
                                 onClick={() => void openDelete(r)}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />

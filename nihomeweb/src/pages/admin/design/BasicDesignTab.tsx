@@ -72,8 +72,8 @@ const STATUS_BADGE: Record<BasicDesignDocStatus, string> = {
   InProgress: "border-info/30 bg-info-soft text-info-strong",
   SubmittedForReview: "border-warning/40 bg-warning-soft text-warning-strong",
   InternallyApproved: "border-success/30 bg-success-soft text-success-strong",
-  SubmittedForPermit: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  PermitApproved: "border-emerald-300 bg-emerald-100 text-success-strong",
+  SubmittedForPermit: "border-info/40 bg-info-soft text-info-strong",
+  PermitApproved: "border-success/40 bg-success-soft text-success-strong",
   Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
@@ -428,7 +428,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
   }
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/20 bg-rose-50/60 p-4 text-sm text-destructive">
+      <div className="rounded-lg border border-destructive/20 bg-danger-soft/60 p-4 text-sm text-destructive">
         {error}
       </div>
     );
@@ -452,7 +452,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
           className={cn(
             "rounded-lg border p-3 shadow-sm",
             readiness.readyForDetailDesign
-              ? "border-success/30 bg-emerald-50/60"
+              ? "border-success/30 bg-success-soft/60"
               : "border-border bg-muted/30",
           )}
         >
@@ -501,7 +501,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                 size="sm"
                 className={cn(
                   "gap-1.5",
-                  readiness.readyForDetailDesign ? "bg-emerald-600 hover:bg-emerald-700" : "",
+                  readiness.readyForDetailDesign ? "bg-success hover:bg-success" : "",
                 )}
                 disabled={!readiness.readyForDetailDesign || busyUnlock}
                 onClick={() => void doUnlock()}
@@ -514,7 +514,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
             <div className="flex min-w-0 items-start gap-2">
               {clientReviewReady ? (
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success-strong" />
               ) : (
                 <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               )}
@@ -662,7 +662,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-rose-800"
+                            className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-danger-strong"
                             onClick={() => setDeleting(row)}
                             data-testid={`basic-design-delete-${row.id}`}
                           >
@@ -861,7 +861,7 @@ const RowActions = ({
           {canApprove ? (
             <Button
               size="sm"
-              className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")}
+              className={cn(btn, "bg-success hover:bg-success")}
               disabled={busy}
               onClick={() => onTransition("InternallyApproved")}
             >
@@ -912,7 +912,7 @@ const RowActions = ({
         <>
           <Button
             size="sm"
-            className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")}
+            className={cn(btn, "bg-success hover:bg-success")}
             disabled={busy}
             onClick={() => onTransition("PermitApproved")}
           >
@@ -932,7 +932,7 @@ const RowActions = ({
         </>
       )}
       {s === "PermitApproved" && (
-        <Badge variant="outline" className="border-emerald-300 bg-emerald-100 text-success-strong">
+        <Badge variant="outline" className="border-success/40 bg-success-soft text-success-strong">
           <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
           {t("basicDesign.status.PermitApproved")}
         </Badge>
@@ -950,7 +950,7 @@ const RowActions = ({
         <Button
           size="sm"
           variant="ghost"
-          className={cn(btn, "text-destructive hover:bg-destructive/10 hover:text-rose-800")}
+          className={cn(btn, "text-destructive hover:bg-destructive/10 hover:text-danger-strong")}
           onClick={onDelete}
           data-testid={`basic-design-delete-${row.id}`}
         >

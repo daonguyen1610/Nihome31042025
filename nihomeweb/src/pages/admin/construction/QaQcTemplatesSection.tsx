@@ -168,7 +168,7 @@ export function QaQcTemplatesSection({
         <PageEmpty
           message={t("construction.qaQc.noTemplates")}
           action={
-            <Button onClick={openCreate}>
+            <Button variant="outline" onClick={openCreate}>
               <FilePlus2 className="mr-2 h-4 w-4" />
               {t("construction.qaQc.newTemplate")}
             </Button>

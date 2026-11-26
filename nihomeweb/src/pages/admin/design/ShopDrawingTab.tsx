@@ -73,8 +73,8 @@ const STATUS_BADGE: Record<ShopDrawingStatus, string> = {
   Drafting: "border-info/30 bg-info-soft text-info-strong",
   InReview: "border-warning/40 bg-warning-soft text-warning-strong",
   Approved: "border-success/30 bg-success-soft text-success-strong",
-  PendingIfc: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  Released: "border-emerald-300 bg-emerald-100 text-success-strong",
+  PendingIfc: "border-warning/40 bg-warning-soft text-warning-strong",
+  Released: "border-success/40 bg-success-soft text-success-strong",
   Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
@@ -458,7 +458,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
   }
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/20 bg-rose-50/60 p-4 text-sm text-destructive">
+      <div className="rounded-lg border border-destructive/20 bg-danger-soft/60 p-4 text-sm text-destructive">
         {error}
       </div>
     );
@@ -766,7 +766,7 @@ const TONE_BG: Record<string, string> = {
   sky: "border-info/30 bg-info-soft text-info-strong",
   amber: "border-warning/40 bg-warning-soft text-warning-strong",
   emerald: "border-success/30 bg-success-soft text-success-strong",
-  indigo: "border-indigo-200 bg-indigo-50 text-indigo-700",
+  indigo: "border-info/40 bg-info-soft text-info-strong",
 };
 
 const StatPill = ({
@@ -872,7 +872,7 @@ const DisciplineSection = ({
                     className={cn(
                       "rounded-md border bg-muted/40 p-2",
                       focusedDocumentId === row.id
-                        ? "border-amber-400 ring-2 ring-amber-200"
+                        ? "border-warning/40 ring-2 ring-amber-200"
                         : "border-border",
                     )}
                   >
@@ -961,7 +961,7 @@ const DisciplineSection = ({
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-rose-800"
+                            className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-danger-strong"
                             onClick={() => onDelete(row)}
                             data-testid={`shop-drawing-delete-${row.id}`}
                           >
@@ -1052,7 +1052,7 @@ const RowActions = ({
           {canApprove ? (
             <Button
               size="sm"
-              className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")}
+              className={cn(btn, "bg-success hover:bg-success")}
               disabled={busy}
               onClick={() => onTransition("Approved")}
               data-testid={`shop-drawing-approve-${row.id}`}
@@ -1126,7 +1126,7 @@ const RowActions = ({
         </>
       )}
       {s === "Released" && (
-        <Badge variant="outline" className="border-emerald-300 bg-emerald-100 text-success-strong">
+        <Badge variant="outline" className="border-success/40 bg-success-soft text-success-strong">
           <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
           {t("shopDrawing.status.Released")}
         </Badge>
@@ -1144,7 +1144,7 @@ const RowActions = ({
         <Button
           size="sm"
           variant="ghost"
-          className={cn(btn, "text-destructive hover:bg-destructive/10 hover:text-rose-800")}
+          className={cn(btn, "text-destructive hover:bg-destructive/10 hover:text-danger-strong")}
           onClick={onDelete}
           data-testid={`shop-drawing-delete-${row.id}`}
         >

@@ -28,7 +28,7 @@ import { useAppSelector } from "@/store";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { parseVnd } from "@/lib/numberFormat";
-import { PageLoading, PageError } from "@/components/PageState";
+import { PageError, PageNoMatches, ListSkeleton } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -69,10 +69,10 @@ const STATUS_STYLES: Record<QuoteStatus, string> = {
   PendingApproval: "border-warning/40 bg-warning-soft text-warning-strong",
   Approved: "border-success/30 bg-success-soft text-success-strong",
   SentToCustomer: "border-info/30 bg-info-soft text-info-strong",
-  CustomerApproved: "border-green-300 bg-green-100 text-green-800",
+  CustomerApproved: "border-success/40 bg-success-soft text-success-strong",
   Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
-  Expired: "border-orange-200 bg-orange-50 text-orange-700",
-  Cancelled: "border-zinc-200 bg-zinc-100 text-zinc-600",
+  Expired: "border-warning/40 bg-warning-soft text-warning-strong",
+  Cancelled: "border-border bg-muted text-muted-foreground",
 };
 
 // Which workflow buttons make sense given the current status.
@@ -108,7 +108,7 @@ const AdminQuotes = () => {
   const { has } = usePermissions();
   const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const canManage = has(ADMIN_PERMS.quotesManage);
   const canApprove = has(ADMIN_PERMS.quotesApprove);
@@ -453,14 +453,26 @@ const AdminQuotes = () => {
       </div>
 
       {loading && rows.length === 0 ? (
-        <PageLoading />
+        <ListSkeleton />
       ) : error ? (
         <PageError message={error} onRetry={() => void fetchList()} />
+      ) : rows.length === 0 && Object.keys(listFilters).length > 0 ? (
+        <PageNoMatches
+          onClear={() => {
+            setSearchInput("");
+            setSearch("");
+            setStatusFilter("");
+            setMinValue("");
+            setMaxValue("");
+            setPage(1);
+            setSearchParams({});
+          }}
+        />
       ) : rows.length === 0 ? (
         <div className="rounded-lg border bg-card p-10 text-center">
           <p className="text-muted-foreground">{t("quotes.empty")}</p>
           {canManage && (
-            <Button className="mt-4" onClick={() => openCreate()}>
+            <Button variant="outline" className="mt-4" onClick={() => openCreate()}>
               <Plus className="mr-1.5 h-4 w-4" />
               {t("quotes.emptyCta")}
             </Button>

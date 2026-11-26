@@ -15,6 +15,7 @@ import { useI18n } from "@/lib/i18n";
 import { getCurrentUser } from "@/lib/auth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
+import { PageLoading } from "@/components/PageState";
 import { SalesFunnelPanel } from "@/components/admin/SalesFunnelPanel";
 import { useActivities, useProjects, useJobPositions } from "@/hooks/useContentApi";
 
@@ -137,45 +138,43 @@ const Dashboard = () => {
   const stats = [
     {
       label: t("dash.totalPosts"),
-      value: totalPosts,
+      value: activities ? totalPosts : undefined,
       icon: FileText,
-      bg: "linear-gradient(135deg, hsl(244 75% 64%), hsl(255 80% 72%))",
+      iconClass: "bg-muted text-foreground",
       to: "/admin/activities",
     },
     {
       label: t("dash.activeProjects"),
-      value: `${ongoingProjects}/${totalProjects}`,
+      value: projects ? `${ongoingProjects}/${totalProjects}` : undefined,
       icon: Building2,
-      bg: "linear-gradient(135deg, hsl(354 84% 57%), hsl(22 95% 58%))",
+      iconClass: "bg-primary/10 text-primary",
       to: "/admin/projects",
     },
     {
       label: t("dash.openPositions"),
-      value: openPositions,
+      value: jobPositions ? openPositions : undefined,
       icon: Briefcase,
-      bg: "linear-gradient(135deg, hsl(150 65% 45%), hsl(160 65% 50%))",
+      iconClass: "bg-success-soft text-success-strong",
       to: "/admin/recruitment",
     },
     {
       label: t("dash.totalApplications"),
-      value: totalApplications,
+      value: jobPositions ? totalApplications : undefined,
       icon: Users,
-      bg: "linear-gradient(135deg, hsl(195 85% 50%), hsl(210 85% 60%))",
+      iconClass: "bg-info-soft text-info-strong",
       to: "/admin/recruitment",
     },
   ];
 
   return (
     <AdminLayout>
-      <div className="space-y-6 p-4 sm:p-6">
+      <div className="space-y-5">
         {/* Welcome */}
         <header>
           <p className="text-sm font-medium text-primary">
             {t("dash.welcome")}, {user?.name ?? "Admin"} 👋
           </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-            {t("dash.overview")}
-          </h1>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{t("dash.overview")}</h1>
         </header>
 
         {/* Stat cards */}
@@ -184,17 +183,18 @@ const Dashboard = () => {
             <Link
               key={i}
               to={s.to}
-              className="relative overflow-hidden rounded-lg p-5 text-white shadow-sm transition hover:brightness-110"
-              style={{ background: s.bg }}
+              className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <div className="relative z-10 mb-6 flex items-start justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-card/15 backdrop-blur">
+              <div className="mb-4 flex items-start justify-between">
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-md ${s.iconClass}`}
+                >
                   <s.icon className="h-5 w-5" strokeWidth={1.75} />
                 </div>
-                <ArrowUpRight className="h-4 w-4 opacity-60" />
+                <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
               </div>
-              <p className="relative z-10 mb-2 text-3xl font-bold leading-none">{s.value}</p>
-              <p className="relative z-10 text-sm font-medium text-white/85">{s.label}</p>
+              <p className="mb-1 text-2xl font-semibold leading-8 tabular-nums">{s.value ?? "—"}</p>
+              <p className="text-sm text-muted-foreground">{s.label}</p>
             </Link>
           ))}
         </div>
@@ -205,7 +205,9 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <section className="rounded-lg border bg-card p-6 xl:col-span-2">
             <h2 className="mb-5 text-lg font-semibold">{t("dash.postsOverTime")}</h2>
-            {postsOverTime.length === 0 ? (
+            {!activities ? (
+              <PageLoading />
+            ) : postsOverTime.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">{t("common.noData")}</p>
             ) : (
               <ChartContainer config={postsOverTimeConfig} className="aspect-auto h-64 w-full">
@@ -222,7 +224,9 @@ const Dashboard = () => {
 
           <section className="rounded-lg border bg-card p-6">
             <h2 className="mb-5 text-lg font-semibold">{t("dash.projectsByStatus")}</h2>
-            {projectStatusData.length === 0 ? (
+            {!projects ? (
+              <PageLoading />
+            ) : projectStatusData.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">{t("common.noData")}</p>
             ) : (
               <ChartContainer config={projectStatusConfig} className="aspect-auto h-64 w-full">
@@ -259,7 +263,9 @@ const Dashboard = () => {
                 {t("dash.viewAll")} <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-            {recentPosts.length === 0 ? (
+            {!activities ? (
+              <PageLoading />
+            ) : recentPosts.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">{t("common.noData")}</p>
             ) : (
               <div className="divide-y">
@@ -279,24 +285,12 @@ const Dashboard = () => {
           </section>
 
           {/* Quick action */}
-          <section
-            className="relative overflow-hidden rounded-lg p-6 text-white shadow-sm"
-            style={{ background: "linear-gradient(135deg, hsl(244 75% 64%), hsl(255 80% 72%))" }}
-          >
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-card/10" />
-            <p className="text-xs font-medium uppercase tracking-wider opacity-80">
-              {t("dash.quickAction")}
-            </p>
-            <h3 className="relative z-10 mt-2 text-xl font-bold">{t("dash.createPost")}</h3>
-            <p className="relative z-10 mb-5 mt-2 text-sm opacity-85">{t("dash.createPostDesc")}</p>
-            <Button
-              asChild
-              size="sm"
-              variant="secondary"
-              className="relative z-10 bg-card text-primary hover:bg-card/90"
-            >
+          <section className="rounded-lg border bg-card p-6">
+            <h3 className="text-lg font-semibold">{t("dash.createPost")}</h3>
+            <p className="mb-5 mt-2 text-sm text-muted-foreground">{t("dash.createPostDesc")}</p>
+            <Button asChild size="sm">
               <Link to="/admin/activities/new">
-                <Plus className="mr-1.5 h-4 w-4" /> {t("activities.create")}
+                <Plus /> {t("activities.create")}
               </Link>
             </Button>
           </section>

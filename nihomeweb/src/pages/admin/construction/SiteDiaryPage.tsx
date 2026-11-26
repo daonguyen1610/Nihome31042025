@@ -679,7 +679,7 @@ export const SiteDiaryPanel = ({ designProjectId, scope }: DesignProjectScopePro
             )}
             {canManage && selected.size > 0 && (
               <Button
-                variant="destructive"
+                variant="destructiveOutline"
                 size="sm"
                 onClick={() => setConfirmBulkDelete(true)}
                 className="ml-auto"
@@ -702,7 +702,12 @@ export const SiteDiaryPanel = ({ designProjectId, scope }: DesignProjectScopePro
             message={t("siteDiary.empty")}
             action={
               canManage && (
-                <Button size="sm" onClick={openCreate} data-testid="diary-empty-new">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openCreate}
+                  data-testid="diary-empty-new"
+                >
                   <ClipboardList className="mr-2 h-4 w-4" />
                   {t("siteDiary.new")}
                 </Button>
@@ -1241,7 +1246,7 @@ export const SiteDiaryPanel = ({ designProjectId, scope }: DesignProjectScopePro
                     <div className="flex flex-wrap gap-2">
                       {canManage ? (
                         <Button
-                          variant="destructive"
+                          variant="destructiveOutline"
                           size="sm"
                           onClick={() => setConfirmAction({ kind: "delete", row: detail })}
                           data-testid="diary-detail-delete"

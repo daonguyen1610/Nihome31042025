@@ -344,7 +344,7 @@ const EmailTemplateConfig = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-semibold">{t("a11yUi.emailTitle")}</h1>
           <div className={cn("flex items-center gap-2", usesCustomEditor(activeTab) && "hidden")}>

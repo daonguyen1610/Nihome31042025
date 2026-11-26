@@ -61,7 +61,7 @@ const statusClass: Record<ProjectDocumentSyncStatus, string> = {
   Synced: "border-success/30 bg-success-soft text-success-strong",
   Failed: "border-destructive/20 bg-destructive/10 text-destructive",
   Deleted: "border-border bg-muted/30 text-muted-foreground",
-  Conflict: "border-orange-200 bg-orange-50 text-orange-700",
+  Conflict: "border-warning/40 bg-warning-soft text-warning-strong",
   Missing: "border-destructive/20 bg-destructive/10 text-destructive",
   Damaged: "border-warning/40 bg-warning-soft text-warning-strong",
 };

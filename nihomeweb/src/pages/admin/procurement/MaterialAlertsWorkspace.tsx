@@ -41,14 +41,14 @@ interface MaterialAlertsWorkspaceProps {
 }
 
 const statusClass: Record<MaterialAlertStatus, string> = {
-  Open: "border-destructive/20 bg-destructive/10 text-rose-800",
+  Open: "border-destructive/20 bg-destructive/10 text-danger-strong",
   Acknowledged: "border-warning/40 bg-warning-soft text-warning-strong",
   Resolved: "border-success/30 bg-success-soft text-success-strong",
 };
 
 const severityClass: Record<MaterialAlertSeverity, string> = {
-  Critical: "border-rose-300 bg-rose-100 text-rose-900",
-  Warning: "border-amber-300 bg-amber-100 text-amber-900",
+  Critical: "border-danger/40 bg-danger-soft text-danger-strong",
+  Warning: "border-warning/40 bg-warning-soft text-warning-strong",
 };
 
 const MaterialAlertsWorkspace = ({
@@ -202,7 +202,7 @@ const MaterialAlertsWorkspace = ({
             id="material-alerts-heading"
             className="flex items-center gap-2 text-lg font-semibold"
           >
-            <TriangleAlert className="h-5 w-5 text-amber-600" />
+            <TriangleAlert className="h-5 w-5 text-warning-strong" />
             {t("procurement.alerts.title")}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">

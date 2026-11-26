@@ -35,7 +35,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { validateContact, type ContactIssue } from "@/lib/validation";
-import { PageLoading, PageError } from "@/components/PageState";
+import { PageLoading, PageError, PageNoMatches, ListSkeleton } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -94,22 +94,22 @@ const ACTIVITY_TYPES: CustomerActivityType[] = ["Call", "Email", "Meeting", "Not
 // Soft-colored pills so every relationship status looks equally weighted in the table.
 const CUSTOMER_STATUS_STYLES: Record<CustomerRelationshipStatus, string> = {
   Prospect: "border-info/30 bg-info-soft text-info-strong",
-  InProgress: "border-warning/40 bg-warning-soft text-warning-strong",
-  Signed: "border-green-300 bg-green-100 text-green-800",
+  InProgress: "border-info/40 bg-info-soft text-info-strong",
+  Signed: "border-success/40 bg-success-soft text-success-strong",
   Suspended: "border-border bg-muted text-muted-foreground",
 };
 
 const CUSTOMER_STATUS_DOT: Record<CustomerRelationshipStatus, string> = {
-  Prospect: "bg-sky-500",
-  InProgress: "bg-amber-500",
-  Signed: "bg-green-600",
+  Prospect: "bg-info",
+  InProgress: "bg-info",
+  Signed: "bg-success",
   Suspended: "bg-muted-foreground",
 };
 
 // Type badge is decorative — keeps Individual vs Company visually distinct without shouting.
 const CUSTOMER_TYPE_STYLES: Record<CustomerType, string> = {
-  Individual: "border-violet-200 bg-violet-50 text-violet-700",
-  Company: "border-indigo-200 bg-indigo-50 text-indigo-700",
+  Individual: "border-border bg-muted text-foreground",
+  Company: "border-border bg-muted text-foreground",
 };
 
 const emptyContact: UpsertCustomerContactRequest = {
@@ -983,9 +983,21 @@ const AdminCustomers = () => {
         </section>
 
         {loading ? (
-          <PageLoading />
+          <ListSkeleton />
         ) : error ? (
           <PageError message={error} onRetry={() => void fetchList()} />
+        ) : rows.length === 0 && Object.keys(listFilters).length > 0 ? (
+          <PageNoMatches
+            onClear={() => {
+              setSearchInput("");
+              setSearch("");
+              setTypeFilter("");
+              setStatusFilter("");
+              setSourceFilter("");
+              setSectorFilter("");
+              setPage(1);
+            }}
+          />
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
             <div className="rounded-full bg-muted p-3">
@@ -993,7 +1005,7 @@ const AdminCustomers = () => {
             </div>
             <p>{t("customers.empty")}</p>
             {canManage && (
-              <Button size="sm" onClick={() => setCreating(true)}>
+              <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
                 <Plus className="mr-1.5 h-4 w-4" /> {t("customers.new")}
               </Button>
             )}
@@ -1001,7 +1013,7 @@ const AdminCustomers = () => {
         ) : (
           <div className="space-y-2">
             {/* Mobile / tablet card view — one <article> per customer. */}
-            <div className="grid gap-2 lg:hidden">
+            <div className="grid gap-2 xl:hidden">
               {rows.map((c) => {
                 const primary = primaryContact(c);
                 return (
@@ -1113,7 +1125,7 @@ const AdminCustomers = () => {
             </div>
 
             {/* Desktop table view (lg+). */}
-            <div className="hidden overflow-x-auto rounded-lg border lg:block">
+            <div className="hidden overflow-x-auto rounded-lg border xl:block">
               <table className="w-full divide-y text-sm">
                 <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
@@ -2008,7 +2020,7 @@ const AdminCustomers = () => {
                             {c.isLegalRepresentative && (
                               <Badge
                                 variant="outline"
-                                className="border-amber-300 bg-warning-soft text-xs text-warning-strong"
+                                className="border-warning/40 bg-warning-soft text-xs text-warning-strong"
                               >
                                 {t("customers.contact.legalRepresentativeBadge")}
                               </Badge>
@@ -2175,7 +2187,7 @@ const AdminCustomers = () => {
                       {canViewOperationalProjects && (
                         <RelatedSection
                           title={t("customers.tab.related.projects")}
-                          icon={<Building2 className="h-4 w-4 text-indigo-600" />}
+                          icon={<Building2 className="h-4 w-4 text-muted-foreground" />}
                           count={relatedTotals.projects}
                           emptyText={t("customers.tab.related.projects.empty")}
                           error={relatedErrors.projects}
@@ -2199,7 +2211,7 @@ const AdminCustomers = () => {
                       {canViewOpportunities && (
                         <RelatedSection
                           title={t("customers.tab.related.opportunities")}
-                          icon={<BriefcaseBusiness className="h-4 w-4 text-sky-600" />}
+                          icon={<BriefcaseBusiness className="h-4 w-4 text-info-strong" />}
                           count={relatedTotals.opportunities}
                           emptyText={t("customers.tab.related.opportunities.empty")}
                           error={relatedErrors.opportunities}
@@ -2221,7 +2233,7 @@ const AdminCustomers = () => {
                       {canViewQuotes && (
                         <RelatedSection
                           title={t("customers.tab.related.quotes")}
-                          icon={<ReceiptText className="h-4 w-4 text-amber-600" />}
+                          icon={<ReceiptText className="h-4 w-4 text-warning-strong" />}
                           count={relatedTotals.quotes}
                           emptyText={t("customers.tab.related.quotes.empty")}
                           error={relatedErrors.quotes}
@@ -2243,7 +2255,7 @@ const AdminCustomers = () => {
                       {canViewContracts && (
                         <RelatedSection
                           title={t("customers.tab.related.contracts")}
-                          icon={<FileSignature className="h-4 w-4 text-emerald-600" />}
+                          icon={<FileSignature className="h-4 w-4 text-success-strong" />}
                           count={relatedTotals.contracts}
                           emptyText={t("customers.tab.related.contracts.empty")}
                           error={relatedErrors.contracts}

@@ -355,7 +355,7 @@ export function QsBatchesPanel({ projectId, scope = "execute" }: ScopeProps) {
               contractFilter != null
                 ? undefined
                 : canManage && (
-                    <Button onClick={openCreate} data-testid="qs-empty-new">
+                    <Button variant="outline" onClick={openCreate} data-testid="qs-empty-new">
                       <Plus className="mr-2 h-4 w-4" />
                       {t("construction.qs.new")}
                     </Button>

@@ -31,7 +31,12 @@ export const BulkActionBar = ({
         <Button variant="outline" size="sm" onClick={onClear} disabled={bulkDeleting}>
           {t("common.clearSelection")}
         </Button>
-        <Button variant="destructive" size="sm" onClick={onBulkDelete} disabled={bulkDeleting}>
+        <Button
+          variant="destructiveOutline"
+          size="sm"
+          onClick={onBulkDelete}
+          disabled={bulkDeleting}
+        >
           <Trash2 className="mr-1.5 h-3.5 w-3.5" />
           {t("common.deleteSelected")}
         </Button>

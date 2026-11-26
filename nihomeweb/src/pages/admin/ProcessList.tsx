@@ -549,7 +549,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t(titleKey)}</h1>
@@ -631,16 +631,16 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
         <Dialog open={openModal} onOpenChange={setOpenModal}>
           <DialogContent className="admin-scope max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
             {/* Gradient header */}
-            <DialogHeader className="relative px-6 py-5 text-left space-y-1 bg-gradient-to-br from-rose-500 via-rose-500 to-orange-500 text-white">
+            <DialogHeader className="relative px-6 py-5 text-left space-y-1 border-b">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-card/15 backdrop-blur flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
                   {isEditing ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                 </div>
                 <div className="min-w-0">
                   <DialogTitle className="text-lg sm:text-xl font-extrabold tracking-tight">
                     {isEditing ? t("proc.editTitle") : t("proc.createTitle")}
                   </DialogTitle>
-                  <DialogDescription className="text-white/85 text-xs sm:text-sm mt-0.5">
+                  <DialogDescription className="text-muted-foreground text-xs sm:text-sm mt-0.5">
                     {t(titleKey)}
                   </DialogDescription>
                 </div>
@@ -652,20 +652,20 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                 {/* Basic info */}
                 <section className="bg-card rounded-2xl border border-border p-5 shadow-sm">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
-                    <span className="w-1 h-4 rounded-full bg-rose-500" />
+                    <span className="w-1 h-4 rounded-full bg-destructive" />
                     {t("proc.basicInfo")}
                   </h3>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-semibold text-foreground mb-1.5">
-                        {t("proc.fieldTitle")} <span className="text-rose-500">*</span>
+                        {t("proc.fieldTitle")} <span className="text-danger-strong">*</span>
                       </label>
                       <input
                         aria-label={t("proc.fieldTitle")}
                         value={form.title}
                         onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                         placeholder={t("proc.titlePh")}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition"
                         required
                         autoFocus
                       />
@@ -680,7 +680,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                           value={form.code}
                           onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
                           placeholder={t("proc.codePh")}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition"
                           maxLength={40}
                         />
                       </div>
@@ -695,7 +695,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                           onChange={(e) =>
                             setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))
                           }
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition"
                         />
                       </div>
                     </div>
@@ -705,7 +705,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                 {/* Assets */}
                 <section className="bg-card rounded-2xl border border-border p-5 shadow-sm">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
-                    <span className="w-1 h-4 rounded-full bg-rose-500" />
+                    <span className="w-1 h-4 rounded-full bg-destructive" />
                     {t("proc.assets")}
                   </h3>
 
@@ -713,7 +713,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                   <div className="mb-5">
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                        <ImageIcon className="w-4 h-4 text-rose-500" />
+                        <ImageIcon className="w-4 h-4 text-danger-strong" />
                         {t("proc.images")}
                         <span className="text-xs font-bold text-muted-foreground ml-1">
                           ({form.images.length})
@@ -724,7 +724,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                           type="button"
                           onClick={() => imageInputRef.current?.click()}
                           disabled={uploadingImages}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-foreground hover:bg-muted/30 hover:border-rose-300 disabled:opacity-50 transition"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-foreground hover:bg-muted/30 hover:border-danger/40 disabled:opacity-50 transition"
                         >
                           {uploadingImages ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -751,9 +751,9 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                         type="button"
                         onClick={() => !uploadingImages && imageInputRef.current?.click()}
                         disabled={uploadingImages}
-                        className="w-full flex flex-col items-center justify-center gap-2 py-7 rounded-xl border-2 border-dashed border-border bg-muted/50 hover:bg-rose-50/40 hover:border-rose-300 transition group disabled:opacity-50"
+                        className="w-full flex flex-col items-center justify-center gap-2 py-7 rounded-xl border-2 border-dashed border-border bg-muted/50 hover:bg-danger-soft/40 hover:border-danger/40 transition group disabled:opacity-50"
                       >
-                        <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center group-hover:scale-110 transition">
+                        <div className="w-10 h-10 rounded-full bg-danger-soft text-danger-strong flex items-center justify-center group-hover:scale-110 transition">
                           {uploadingImages ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
                           ) : (
@@ -780,7 +780,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                             <button
                               type="button"
                               onClick={() => removeAsset("images", i)}
-                              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-600"
+                              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
                               title={t("proc.removeAsset")}
                               aria-label={t("proc.removeAsset")}
                             >
@@ -802,7 +802,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                        <FileText className="w-4 h-4 text-rose-500" />
+                        <FileText className="w-4 h-4 text-danger-strong" />
                         {t("proc.files")}
                         <span className="text-xs font-bold text-muted-foreground ml-1">
                           ({form.files.length})
@@ -813,7 +813,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={uploadingFiles}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-foreground hover:bg-muted/30 hover:border-rose-300 disabled:opacity-50 transition"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-foreground hover:bg-muted/30 hover:border-danger/40 disabled:opacity-50 transition"
                         >
                           {uploadingFiles ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -840,9 +840,9 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                         type="button"
                         onClick={() => !uploadingFiles && fileInputRef.current?.click()}
                         disabled={uploadingFiles}
-                        className="w-full flex flex-col items-center justify-center gap-2 py-7 rounded-xl border-2 border-dashed border-border bg-muted/50 hover:bg-rose-50/40 hover:border-rose-300 transition group disabled:opacity-50"
+                        className="w-full flex flex-col items-center justify-center gap-2 py-7 rounded-xl border-2 border-dashed border-border bg-muted/50 hover:bg-danger-soft/40 hover:border-danger/40 transition group disabled:opacity-50"
                       >
-                        <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center group-hover:scale-110 transition">
+                        <div className="w-10 h-10 rounded-full bg-danger-soft text-danger-strong flex items-center justify-center group-hover:scale-110 transition">
                           {uploadingFiles ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
                           ) : (
@@ -861,7 +861,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                             key={i}
                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-card hover:border-destructive/20 transition"
                           >
-                            <div className="w-9 h-9 rounded-lg bg-destructive/10 text-rose-500 flex items-center justify-center shrink-0">
+                            <div className="w-9 h-9 rounded-lg bg-destructive/10 text-danger-strong flex items-center justify-center shrink-0">
                               <FileText className="w-4 h-4" />
                             </div>
                             <div className="min-w-0 flex-1">
@@ -905,7 +905,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                 <button
                   type="submit"
                   disabled={submitting || uploadingImages || uploadingFiles}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-gradient-to-br from-rose-500 to-orange-500 shadow-md shadow-rose-500/30 hover:shadow-lg hover:shadow-rose-500/40 hover:brightness-105 disabled:opacity-50 disabled:shadow-none transition"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md font-medium text-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
                   {submitting ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

@@ -308,7 +308,7 @@ const AdminContacts = () => {
                           <p className="truncate text-sm font-semibold">{c.name}</p>
                           {!c.isReplied && (
                             <span
-                              className="h-2 w-2 shrink-0 rounded-full bg-sky-500"
+                              className="h-2 w-2 shrink-0 rounded-full bg-info"
                               aria-label={t("contacts.new")}
                             />
                           )}
@@ -359,7 +359,7 @@ const AdminContacts = () => {
                     {active.isReplied ? (
                       <Badge
                         variant="outline"
-                        className="gap-1.5 whitespace-nowrap border-green-300 bg-green-100 font-medium text-green-800"
+                        className="gap-1.5 whitespace-nowrap border-success/40 bg-success-soft font-medium text-success-strong"
                       >
                         <CheckCircle2 className="h-3 w-3" /> {t("contacts.replied")}
                       </Badge>
@@ -368,7 +368,7 @@ const AdminContacts = () => {
                         variant="outline"
                         className="gap-1.5 whitespace-nowrap border-info/30 bg-info-soft font-medium text-info-strong"
                       >
-                        <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-info" />
                         {t("contacts.new")}
                       </Badge>
                     )}
@@ -395,10 +395,10 @@ const AdminContacts = () => {
 
                 {active.replyContent && (
                   <div className="mb-6">
-                    <p className="mb-2 text-xs font-medium text-green-700">
+                    <p className="mb-2 text-xs font-medium text-success-strong">
                       {t("contacts.replyContent")}
                     </p>
-                    <p className="whitespace-pre-wrap rounded-md border border-green-200 bg-green-50 p-4 leading-relaxed text-green-900">
+                    <p className="whitespace-pre-wrap rounded-md border border-success/40 bg-success-soft p-4 leading-relaxed text-success-strong">
                       {active.replyContent}
                     </p>
                   </div>

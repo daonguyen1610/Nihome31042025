@@ -35,8 +35,8 @@ import {
 
 const STAGE_BADGE: Record<DesignProjectStage, string> = {
   Concept: "border-info/30 bg-info-soft text-info-strong",
-  BasicDesign: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  ShopDrawing: "border-violet-200 bg-violet-50 text-violet-700",
+  BasicDesign: "border-info/40 bg-info-soft text-info-strong",
+  ShopDrawing: "border-info/40 bg-info-soft text-info-strong",
   Completed: "border-success/30 bg-success-soft text-success-strong",
 };
 
@@ -221,7 +221,7 @@ const AdminDesignProjectDetail = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-3 md:p-4">
+      <div className="space-y-4">
         <div>
           <Link
             to="/admin/design-projects"
@@ -237,7 +237,7 @@ const AdminDesignProjectDetail = () => {
             <div className="flex min-w-0 items-center gap-3">
               <PenTool className="h-6 w-6 text-muted-foreground" />
               <div className="min-w-0">
-                <h1 className="break-words text-lg font-bold text-foreground md:text-2xl">
+                <h1 className="break-words text-foreground text-2xl font-semibold">
                   {project.name}
                 </h1>
                 <p className="text-sm text-muted-foreground">{project.projectCode}</p>

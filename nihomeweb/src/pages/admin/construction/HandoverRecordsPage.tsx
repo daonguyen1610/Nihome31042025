@@ -646,7 +646,7 @@ export function HandoverRecordsPanel({
       {canManage && (
         <Button
           size="sm"
-          variant="destructive"
+          variant="destructiveOutline"
           onClick={() => setPendingDelete(record)}
           data-testid="handover-detail-delete"
         >
@@ -819,7 +819,7 @@ export function HandoverRecordsPanel({
             message={t("handover.empty")}
             action={
               canManage && (
-                <Button onClick={openCreate} data-testid="handover-empty-new">
+                <Button variant="outline" onClick={openCreate} data-testid="handover-empty-new">
                   <Plus className="mr-2 h-4 w-4" />
                   {t("handover.action.new")}
                 </Button>

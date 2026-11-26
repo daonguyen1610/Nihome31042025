@@ -63,7 +63,7 @@ const LanguagesPage = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">{t("set.languages")}</h1>
           <Button
@@ -92,7 +92,7 @@ const LanguagesPage = () => {
                 </div>
                 {r.published ? (
                   <Check
-                    className="h-4 w-4 shrink-0 text-emerald-600"
+                    className="h-4 w-4 shrink-0 text-success-strong"
                     aria-label={t("set.published")}
                   />
                 ) : (
@@ -117,7 +117,7 @@ const LanguagesPage = () => {
                 >
                   <Pencil className="mr-1 h-3 w-3" /> {t("common.edit")}
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => remove(r.id)}>
+                <Button size="sm" variant="destructiveOutline" onClick={() => remove(r.id)}>
                   <Trash2 className="mr-1 h-3 w-3" /> {t("common.delete")}
                 </Button>
               </div>
@@ -148,7 +148,7 @@ const LanguagesPage = () => {
                     <td className="px-4 py-3">{r.displayOrder}</td>
                     <td className="px-4 py-3">
                       {r.published ? (
-                        <Check className="h-5 w-5 text-emerald-600" />
+                        <Check className="h-5 w-5 text-success-strong" />
                       ) : (
                         <X className="h-5 w-5 text-destructive" />
                       )}
@@ -165,7 +165,7 @@ const LanguagesPage = () => {
                         >
                           <Pencil className="mr-1 h-3 w-3" /> {t("common.edit")}
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => remove(r.id)}>
+                        <Button size="sm" variant="destructiveOutline" onClick={() => remove(r.id)}>
                           <Trash2 className="mr-1 h-3 w-3" /> {t("common.delete")}
                         </Button>
                       </div>

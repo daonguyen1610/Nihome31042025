@@ -72,15 +72,15 @@ function getExperienceLabel(code: string, names: Map<string, string>, t: (key: s
 const APP_STATUS_STYLES: Record<string, string> = {
   new: "border-info/30 bg-info-soft text-info-strong",
   interview: "border-warning/40 bg-warning-soft text-warning-strong",
-  hired: "border-green-300 bg-green-100 text-green-800",
+  hired: "border-success/40 bg-success-soft text-success-strong",
   rejected: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const APP_STATUS_DOT: Record<string, string> = {
-  new: "bg-sky-500",
-  interview: "bg-amber-500",
-  hired: "bg-green-600",
-  rejected: "bg-rose-500",
+  new: "bg-info",
+  interview: "bg-warning",
+  hired: "bg-success",
+  rejected: "bg-destructive",
 };
 
 function getErrorMessage(error: unknown) {
@@ -311,7 +311,7 @@ const AdminRecruitment = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 p-4 sm:p-6">
+      <div className="space-y-6">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t("recruit.title")}</h1>
@@ -415,14 +415,14 @@ const AdminRecruitment = () => {
                         className={cn(
                           "gap-1.5 whitespace-nowrap font-medium",
                           p.isActive
-                            ? "border-green-300 bg-green-100 text-green-800"
+                            ? "border-success/40 bg-success-soft text-success-strong"
                             : "border-border bg-muted text-muted-foreground",
                         )}
                       >
                         <span
                           className={cn(
                             "h-1.5 w-1.5 rounded-full",
-                            p.isActive ? "bg-green-600" : "bg-muted-foreground",
+                            p.isActive ? "bg-success" : "bg-muted-foreground",
                           )}
                         />
                         {p.isActive ? t("recruit.hiring") : t("recruit.closed")}
@@ -566,7 +566,7 @@ const AdminRecruitment = () => {
             ) : (
               <>
                 {/* Mobile / tablet card view (<lg) */}
-                <ul className="grid gap-3 lg:hidden">
+                <ul className="grid gap-3 xl:hidden">
                   {filteredApplications.map((a) => (
                     <li key={a.id} className="rounded-lg border bg-card p-3 shadow-sm">
                       <div className="flex items-start gap-2">
@@ -662,7 +662,7 @@ const AdminRecruitment = () => {
                 </ul>
 
                 {/* Desktop table (lg+) */}
-                <div className="hidden overflow-x-auto rounded-lg border lg:block">
+                <div className="hidden overflow-x-auto rounded-lg border xl:block">
                   <table className="min-w-[900px] w-full divide-y text-sm">
                     <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                       <tr>

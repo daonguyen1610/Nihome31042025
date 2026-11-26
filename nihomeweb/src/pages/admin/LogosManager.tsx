@@ -324,7 +324,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 
   return (
     <AdminLayout>
-      <div className={`admin-logo-manager space-y-4 p-4 sm:p-6 ${isAwards ? "is-awards" : ""}`}>
+      <div className={`admin-logo-manager space-y-4 ${isAwards ? "is-awards" : ""}`}>
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t(titleKey)}</h1>

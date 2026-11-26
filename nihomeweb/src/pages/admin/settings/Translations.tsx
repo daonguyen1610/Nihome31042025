@@ -612,7 +612,7 @@ const TranslationsPage = () => {
   /* ─── Render ─── */
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header>
           <h1 className="text-2xl font-semibold">{t("nav.translations")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("translations.subtitle")}</p>
@@ -694,7 +694,7 @@ const TranslationsPage = () => {
                 <>
                   {/* Mobile / tablet card view (<lg). Table has 7 columns and 4
                       of them are language values, which do not fit on a phone. */}
-                  <ul className="grid gap-3 p-3 lg:hidden">
+                  <ul className="grid gap-3 p-3 xl:hidden">
                     {paged.map((p) => (
                       <li key={p.key} className="rounded-lg border bg-card p-3 shadow-sm">
                         <div className="flex items-start justify-between gap-2">
@@ -704,7 +704,7 @@ const TranslationsPage = () => {
                           {p.category && (
                             <Badge
                               variant="outline"
-                              className="shrink-0 whitespace-normal border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                              className="shrink-0 whitespace-normal border-border bg-muted font-medium text-foreground"
                             >
                               {p.category}
                             </Badge>
@@ -747,7 +747,7 @@ const TranslationsPage = () => {
                   </ul>
 
                   {/* Desktop table (lg+) */}
-                  <div className="hidden overflow-x-auto lg:block">
+                  <div className="hidden overflow-x-auto xl:block">
                     <table className="w-full min-w-[900px] divide-y text-sm">
                       <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                         <tr>
@@ -791,7 +791,7 @@ const TranslationsPage = () => {
                               {p.category && (
                                 <Badge
                                   variant="outline"
-                                  className="border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                                  className="border-border bg-muted font-medium text-foreground"
                                 >
                                   {p.category}
                                 </Badge>

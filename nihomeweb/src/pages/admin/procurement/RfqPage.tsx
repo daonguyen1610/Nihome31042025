@@ -773,7 +773,7 @@ function RfqWorkspace({
                           return (
                             <td
                               key={v.id}
-                              className={`p-3 ${v.isActive && cell && Date.parse(bid!.validUntil) >= Date.now() && cell.unitPrice === line.lowestUnitPrice ? "bg-success-soft text-emerald-900" : ""}`}
+                              className={`p-3 ${v.isActive && cell && Date.parse(bid!.validUntil) >= Date.now() && cell.unitPrice === line.lowestUnitPrice ? "bg-success-soft text-success-strong" : ""}`}
                             >
                               {cell ? (
                                 <>
@@ -868,7 +868,7 @@ function RfqWorkspace({
                 </RfqField>
                 {canManage && (
                   <Button
-                    variant="destructive"
+                    variant="destructiveOutline"
                     disabled={busy}
                     onClick={() => transition("cancel")}
                   >

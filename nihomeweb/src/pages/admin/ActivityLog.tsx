@@ -351,7 +351,7 @@ const ActivityLog = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 data-testid="audit-log-title" className="text-2xl font-semibold">
@@ -376,7 +376,7 @@ const ActivityLog = () => {
               {t("common.refresh")}
             </Button>
             {canManageAudit && (
-              <Button variant="destructive" onClick={onClearBefore}>
+              <Button variant="destructiveOutline" onClick={onClearBefore}>
                 <Eraser className="mr-1.5 h-4 w-4" /> {t("log.clearBefore")}
               </Button>
             )}
@@ -566,7 +566,7 @@ const ActivityLog = () => {
           {/* Mobile / tablet card view (<lg). Audit rows are wide (8-9
               columns) so a horizontally-scrolling table on a phone is
               painful — stack into cards. */}
-          <ul className="grid gap-3 p-3 lg:hidden">
+          <ul className="grid gap-3 p-3 xl:hidden">
             {loading && items.length === 0 && (
               <li className="rounded-lg border border-dashed p-10 text-center">
                 <Loader2 className="inline-block h-5 w-5 animate-spin text-primary" />
@@ -659,7 +659,7 @@ const ActivityLog = () => {
           </ul>
 
           {/* Desktop table (lg+) */}
-          <div className="hidden overflow-x-auto lg:block">
+          <div className="hidden overflow-x-auto xl:block">
             <table data-testid="audit-log-table" className="w-full min-w-[1100px] divide-y text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>

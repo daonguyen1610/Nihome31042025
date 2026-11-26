@@ -35,7 +35,7 @@ function UploadRow({ item }: { item: UploadItem }) {
             aria-hidden
           />
         ) : item.status === "done" ? (
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success-strong" aria-hidden />
         ) : item.status === "failed" ? (
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
         ) : (

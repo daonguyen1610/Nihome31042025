@@ -785,7 +785,12 @@ export const PunchListPanel = ({
             message={t("punch.empty")}
             action={
               canManage && (
-                <Button size="sm" onClick={openCreate} data-testid="punch-empty-new">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openCreate}
+                  data-testid="punch-empty-new"
+                >
                   <ShieldAlert className="mr-2 h-4 w-4" />
                   {t("punch.new")}
                 </Button>
@@ -1283,7 +1288,7 @@ export const PunchListPanel = ({
                     <div className="flex flex-wrap gap-2">
                       {canManage && (
                         <Button
-                          variant="destructive"
+                          variant="destructiveOutline"
                           size="sm"
                           onClick={() => setConfirmAction({ kind: "delete", row: detail })}
                           data-testid="punch-detail-delete"

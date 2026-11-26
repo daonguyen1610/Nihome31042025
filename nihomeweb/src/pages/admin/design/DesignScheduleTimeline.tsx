@@ -65,7 +65,7 @@ export const DesignScheduleTimeline = ({ tasks, members }: Props) => {
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     {task.isMilestone ? (
-                      <Diamond className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-600" />
+                      <Diamond className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-warning-strong" />
                     ) : null}
                     <strong className="truncate text-sm text-foreground">{task.name}</strong>
                   </div>
@@ -83,13 +83,13 @@ export const DesignScheduleTimeline = ({ tasks, members }: Props) => {
                     <div
                       className={
                         task.overdue
-                          ? "absolute top-1 h-6 rounded bg-rose-400"
-                          : "absolute top-1 h-6 rounded bg-sky-500"
+                          ? "absolute top-1 h-6 rounded bg-destructive"
+                          : "absolute top-1 h-6 rounded bg-info"
                       }
                       style={{ left: `${left}%`, width: `${width}%` }}
                     >
                       <div
-                        className="h-full rounded bg-emerald-500/80"
+                        className="h-full rounded bg-success/80"
                         style={{ width: `${task.progressPercent}%` }}
                       />
                     </div>

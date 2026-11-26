@@ -318,7 +318,7 @@ export default function TenderStatistics({ onInspect, refreshToken }: Props) {
               )}
               {data.missingSubmissionCount > 0 && (
                 <p
-                  className="mt-4 flex items-start gap-2 rounded-lg bg-warning-soft p-3 text-sm text-amber-950"
+                  className="mt-4 flex items-start gap-2 rounded-lg bg-warning-soft p-3 text-sm text-warning-strong"
                   role="status"
                 >
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />

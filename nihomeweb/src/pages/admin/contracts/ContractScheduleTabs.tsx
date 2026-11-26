@@ -62,7 +62,7 @@ export const ScheduleTab = ({
             key={m.id}
             className={cn(
               "rounded-lg border bg-card p-4 shadow-sm",
-              overdue ? "border-rose-300 ring-1 ring-rose-100" : "border-border",
+              overdue ? "border-danger/40 ring-1 ring-rose-100" : "border-border",
             )}
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -93,7 +93,7 @@ export const ScheduleTab = ({
                     {statusLabel(m.status)}
                   </Badge>
                   {overdue ? (
-                    <Badge className="border border-rose-300 bg-rose-100 text-destructive">
+                    <Badge className="border border-danger/40 bg-danger-soft text-destructive">
                       {t("contracts.schedule.overdue")}
                     </Badge>
                   ) : null}

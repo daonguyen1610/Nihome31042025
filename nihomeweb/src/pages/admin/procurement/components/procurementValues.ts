@@ -69,15 +69,15 @@ export const apiDateTime = (value: string) => new Date(value).toISOString();
 
 export const statusClass: Record<string, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
-  Submitted: "border-sky-200 bg-sky-50 text-sky-700",
-  Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  TenderApproved: "border-teal-200 bg-teal-50 text-teal-700",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-700",
-  PartiallyFulfilled: "border-amber-200 bg-amber-50 text-amber-800",
-  Fulfilled: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Submitted: "border-info/40 bg-info-soft text-info-strong",
+  Approved: "border-success/40 bg-success-soft text-success-strong",
+  TenderApproved: "border-success/40 bg-success-soft text-success-strong",
+  Rejected: "border-danger/40 bg-danger-soft text-danger-strong",
+  PartiallyFulfilled: "border-warning/40 bg-warning-soft text-warning-strong",
+  Fulfilled: "border-success/40 bg-success-soft text-success-strong",
   Cancelled: "border-border bg-muted/30 text-muted-foreground",
-  Posted: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Reversed: "border-rose-200 bg-rose-50 text-rose-700",
+  Posted: "border-success/40 bg-success-soft text-success-strong",
+  Reversed: "border-danger/40 bg-danger-soft text-danger-strong",
   Superseded: "border-border bg-muted/30 text-muted-foreground",
 };
 

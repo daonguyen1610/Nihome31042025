@@ -211,15 +211,15 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-info/30 bg-info-soft p-3 text-sm text-sky-950">
+      <div className="rounded-lg border border-info/30 bg-info-soft p-3 text-sm text-info-strong">
         <div className="flex items-start gap-2">
           <FileText className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
             <p className="font-semibold">{t("contracts.appendix.guide.title")}</p>
-            <p className="mt-1 text-sky-900">{t("contracts.appendix.guide.purpose")}</p>
-            <p className="mt-1 text-sky-900">{t("contracts.appendix.guide.workflow")}</p>
-            <p className="mt-1 text-sky-900">{t("contracts.appendix.guide.impact")}</p>
-            <p className="mt-1 text-sky-900">{t("contracts.appendix.guide.delete")}</p>
+            <p className="mt-1 text-info-strong">{t("contracts.appendix.guide.purpose")}</p>
+            <p className="mt-1 text-info-strong">{t("contracts.appendix.guide.workflow")}</p>
+            <p className="mt-1 text-info-strong">{t("contracts.appendix.guide.impact")}</p>
+            <p className="mt-1 text-info-strong">{t("contracts.appendix.guide.delete")}</p>
           </div>
         </div>
       </div>
@@ -378,7 +378,7 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
                           size="sm"
                           disabled={pendingActionId === vo.id}
                           onClick={() => runAction(vo, "approve")}
-                          className="bg-emerald-600 hover:bg-emerald-700"
+                          className="bg-success hover:bg-success"
                         >
                           <ShieldCheck className="mr-1 h-3 w-3" />
                           {t("contracts.appendix.approve")}
@@ -540,7 +540,7 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
             </Button>
             <Button
               onClick={confirmReject}
-              className="bg-rose-600 hover:bg-rose-700"
+              className="bg-destructive hover:bg-destructive"
               disabled={pendingActionId !== null}
             >
               {t("contracts.appendix.reject")}

@@ -19,9 +19,9 @@ export const STATUS_STYLES: Record<ContractStatus, string> = {
   Approved: "border-success-strong/30 bg-success-soft text-success-strong",
   Signed: "border-info/30 bg-info-soft text-info-strong",
   InProgress: "border-warning/40 bg-warning-soft text-warning-strong",
-  OnHold: "border-orange-200 bg-orange-50 text-orange-700",
+  OnHold: "border-warning/40 bg-warning-soft text-warning-strong",
   Completed: "border-success/30 bg-success-soft text-success-strong",
-  Cancelled: "border-zinc-200 bg-zinc-100 text-zinc-600",
+  Cancelled: "border-border bg-muted text-muted-foreground",
 };
 
 export const VO_STATUS_STYLES: Record<ContractAppendixStatus, string> = {

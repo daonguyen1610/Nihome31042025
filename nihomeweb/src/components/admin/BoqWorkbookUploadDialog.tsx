@@ -231,7 +231,7 @@ export function BoqWorkbookUploadDialog({
           {file && (
             <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-2">
-                <FileCheck2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                <FileCheck2 className="h-5 w-5 shrink-0 text-success-strong" />
                 <span className="break-all text-sm font-medium">{file.name}</span>
               </div>
               <Button
@@ -297,7 +297,7 @@ export function BoqWorkbookUploadDialog({
                 .map((key) => (
                   <p
                     key={key}
-                    className="flex gap-2 rounded-md border border-amber-300/70 bg-warning-soft p-2 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+                    className="flex gap-2 rounded-md border border-warning/70 bg-warning-soft p-2 text-xs text-warning-strong dark:border-warning/40 dark:bg-warning/30 dark:text-amber-100"
                   >
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                     {t(key)}
