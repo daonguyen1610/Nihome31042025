@@ -507,6 +507,7 @@ public class SiteSettingsControllerTests : IntegrationTestBase
                     constructionAcceptance = "04_Thi_cong_Nghiem_thu",
                     procurement = "05_Cung_ung_Vat_tu",
                     financeContracts = "06_Tai_chinh_Hop_dong",
+                    handover = "07_Ban_giao_Bao_hanh",
                 },
                 supportsAllDrives = true,
                 pollIntervalSeconds = 15,

@@ -86,10 +86,10 @@ public sealed class GoogleDriveOptionsTests
         await service.EnsureTreeAsync(project);
 
         Assert.Equal(GoogleDriveFolderOptions.StandardTree.Append("01_CoHoi_BaoGia").Order(), paths.Distinct().Order());
-        Assert.Equal(16 + 7, paths.Count); // the repeat only re-checks the unbound folders
+        Assert.Equal(16 + 6, paths.Count); // the repeat only re-checks the unbound folders
         Assert.Equal(8, paths.Select(path => path.Split('/')[0]).Distinct().Count());
         var bindings = await db.ProjectDriveFolders.ToListAsync();
-        Assert.Equal(9, bindings.Count);
+        Assert.Equal(10, bindings.Count);
         Assert.Equal("id-03_ThietKe/02_CoSo",
             bindings.Single(binding => binding.Category == ProjectDocumentCategory.DesignBasic).DriveFolderId);
         drive.Verify(item => item.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -112,8 +112,23 @@ public sealed class GoogleDriveOptionsTests
     [Fact]
     public void ExtraTreePaths_StayEmptyForAnOlderCustomTopology()
     {
-        Assert.Equal(7, new GoogleDriveFolderOptions().ExtraTreePaths().Count());
+        Assert.Equal(6, new GoogleDriveFolderOptions().ExtraTreePaths().Count());
         Assert.Empty(new GoogleDriveFolderOptions { ConstructionAcceptance = "04_Thi_cong_Nghiem_thu" }.ExtraTreePaths());
+    }
+
+    [Fact]
+    public void Handover_category_uses_the_prd_v2_handover_folder()
+    {
+        Assert.Equal("08_BanGiao_BaoHanh", new GoogleDriveFolderOptions().For(ProjectDocumentCategory.Handover));
+    }
+
+    [Fact]
+    public void Default_options_have_no_extra_folder_that_a_category_now_owns()
+    {
+        var extras = new GoogleDriveFolderOptions().ExtraTreePaths().ToList();
+
+        Assert.DoesNotContain("08_BanGiao_BaoHanh", extras);
+        Assert.Contains("07_TaiChinh", extras);
     }
 
     [Fact]

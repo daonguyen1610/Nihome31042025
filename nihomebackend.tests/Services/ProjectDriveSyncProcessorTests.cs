@@ -1085,7 +1085,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
 
         var cursor = await processor.InitializeProjectFoldersAsync(0);
         Assert.Equal(project.Id, cursor);
-        Assert.Equal(9, await db.ProjectDriveFolders.CountAsync(item => item.OperationalProjectId == project.Id));
+        Assert.Equal(10, await db.ProjectDriveFolders.CountAsync(item => item.OperationalProjectId == project.Id));
         Assert.Empty(db.ProjectDocuments);
         Assert.Equal(0, await processor.InitializeProjectFoldersAsync(cursor));
         Assert.Equal(0, await processor.InitializeProjectFoldersAsync(0));

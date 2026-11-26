@@ -303,7 +303,7 @@ public class HandoverRecordService(
                 recordId, path, userId, ct);
         foreach (var path in newPaths.Except(oldPaths, StringComparer.Ordinal))
             await projectDocuments.StageExistingManagedFileAsync(projectId,
-                ProjectDocumentCategory.ConstructionAcceptance, ProjectDocumentSourceModule.Handover,
+                ProjectDocumentCategory.Handover, ProjectDocumentSourceModule.Handover,
                 nameof(HandoverRecord), "documents", recordId, path, Path.GetFileName(path),
                 project.CustomerId, project.ContractId, userId, ct);
     }

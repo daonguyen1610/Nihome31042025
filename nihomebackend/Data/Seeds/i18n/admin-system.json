@@ -3379,6 +3379,9 @@
     "key": "settings.drive.configuration.folder.financeContracts", "category": "settings", "vi": "Tài chính / Hợp đồng", "en": "Finance / Contracts", "zh": "财务 / 合同", "ja": "財務 / 契約"
   },
   {
+    "key": "settings.drive.configuration.folder.handover", "category": "settings", "vi": "Bàn giao / Bảo hành", "en": "Handover / Warranty", "zh": "交接 / 保修", "ja": "引き渡し / 保証"
+  },
+  {
     "key": "settings.drive.configuration.supportsAllDrives", "category": "settings", "vi": "Hỗ trợ cả My Drive và Shared Drive", "en": "Support both My Drive and Shared Drives", "zh": "同时支持 My Drive 和共享云端硬盘", "ja": "My Drive と共有ドライブの両方をサポート"
   },
   {

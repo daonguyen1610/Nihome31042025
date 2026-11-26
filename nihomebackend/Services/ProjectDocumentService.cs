@@ -461,7 +461,10 @@ public sealed class ProjectDocumentService(
         if (Has("design.shop.view")) categories.Add(ProjectDocumentCategory.DesignShopDrawing);
         if (Has("permit.checklists.view")) categories.Add(ProjectDocumentCategory.LegalPermits);
         if (Has("construction.acceptance.view", "construction.qa-qc.view", "construction.qs.view"))
+        {
             categories.Add(ProjectDocumentCategory.ConstructionAcceptance);
+            categories.Add(ProjectDocumentCategory.Handover);
+        }
         if (Has("proc.material-requests.view", "proc.resource-requests.view")) categories.Add(ProjectDocumentCategory.Procurement);
         if (Has("finance.payments.view")) categories.Add(ProjectDocumentCategory.FinanceContracts);
 

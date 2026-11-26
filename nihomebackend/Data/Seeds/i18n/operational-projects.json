@@ -848,6 +848,14 @@
     "ja": "財務・契約"
   },
   {
+    "key": "operationalProjects.documents.category.Handover",
+    "category": "operationalProjects",
+    "vi": "Bàn giao và bảo hành",
+    "en": "Handover and warranty",
+    "zh": "交接与保修",
+    "ja": "引き渡し・保証"
+  },
+  {
     "key": "operationalProjects.documents.download",
     "category": "operationalProjects",
     "vi": "Tải xuống",

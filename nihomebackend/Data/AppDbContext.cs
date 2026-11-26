@@ -2337,6 +2337,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.Property(credential => credential.ConstructionAcceptanceFolder).HasMaxLength(500).IsRequired();
             b.Property(credential => credential.ProcurementFolder).HasMaxLength(500).IsRequired();
             b.Property(credential => credential.FinanceContractsFolder).HasMaxLength(500).IsRequired();
+            b.Property(credential => credential.HandoverFolder).HasMaxLength(500).IsRequired();
             b.Property(credential => credential.AccountEmail).HasMaxLength(320);
             b.Property(credential => credential.RowVersion).IsRowVersion();
             b.ToTable(table => table.HasCheckConstraint(

@@ -113,7 +113,7 @@ public class HandoverRecordServiceTests : IDisposable
             created.Id, "/files/business-documents/handover/old.pdf", _userId,
             It.IsAny<CancellationToken>()), Times.Once);
         _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
-            It.IsAny<int>(), ProjectDocumentCategory.ConstructionAcceptance,
+            It.IsAny<int>(), ProjectDocumentCategory.Handover,
             ProjectDocumentSourceModule.Handover, nameof(HandoverRecord), "documents", created.Id,
             "/files/business-documents/handover/new.pdf", "new.pdf", It.IsAny<int?>(),
             It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);

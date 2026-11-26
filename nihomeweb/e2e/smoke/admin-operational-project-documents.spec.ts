@@ -39,6 +39,7 @@ const categories = [
   ["Procurement", "05_Cung_ung_Vat_tu"],
   ["FinanceContracts", "06_Tai_chinh_Hop_dong"],
   ["Survey", "01_Khao_sat"],
+  ["Handover", "07_Ban_giao_Bao_hanh"],
 ].map(([value, folderPath]) => ({
   value,
   folderPath,

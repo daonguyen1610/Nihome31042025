@@ -33,6 +33,7 @@ const FOLDER_FIELDS: Array<keyof GoogleDriveFolderConfiguration> = [
   "constructionAcceptance",
   "procurement",
   "financeContracts",
+  "handover",
 ];
 
 const CLIENT_ID_PATTERN = /^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/;

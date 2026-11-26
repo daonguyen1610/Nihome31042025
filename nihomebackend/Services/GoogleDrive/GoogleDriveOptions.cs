@@ -35,6 +35,7 @@ public sealed class GoogleDriveFolderOptions
     public string ConstructionAcceptance { get; set; } = "05_ThiCong/03_ChatLuong_NghiemThu";
     public string Procurement { get; set; } = "06_CungUng";
     public string FinanceContracts { get; set; } = "02_HopDong";
+    public string Handover { get; set; } = "08_BanGiao_BaoHanh";
 
     public string For(ProjectDocumentCategory category) => category switch
     {
@@ -47,6 +48,7 @@ public sealed class GoogleDriveFolderOptions
         ProjectDocumentCategory.ConstructionAcceptance => ConstructionAcceptance,
         ProjectDocumentCategory.Procurement => Procurement,
         ProjectDocumentCategory.FinanceContracts => FinanceContracts,
+        ProjectDocumentCategory.Handover => Handover,
         _ => throw new ArgumentOutOfRangeException(nameof(category), "Danh mục chưa phân loại không có thư mục Drive đích."),
     };
 

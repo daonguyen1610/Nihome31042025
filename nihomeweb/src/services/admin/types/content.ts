@@ -484,6 +484,7 @@ export interface GoogleDriveFolderConfiguration {
   constructionAcceptance: string;
   procurement: string;
   financeContracts: string;
+  handover: string;
 }
 
 export interface GoogleDriveAdminConfigurationResponse {

@@ -4620,6 +4620,11 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("nvarchar(2048)");
 
+                    b.Property<string>("HandoverFolder")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("InstanceId")
                         .IsRequired()
                         .HasMaxLength(100)
