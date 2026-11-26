@@ -182,7 +182,7 @@ public sealed partial class DepartmentWorkPackageService(
                 Name = item.FullName ?? item.Email,
                 Email = item.Email,
                 RoleGroupId = item.DepartmentRoleGroupId!.Value,
-                RoleCode = item.RoleEntity.Code,
+                RoleCode = item.RoleEntity!.Code,
                 RoleName = item.RoleEntity.Name,
                 RoleLabelKey = item.RoleEntity.LabelKey,
                 DepartmentLabelKey = item.Department!.LabelKey,
