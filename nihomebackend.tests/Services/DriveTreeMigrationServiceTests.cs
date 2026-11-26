@@ -1,3 +1,5 @@
+using Google;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using NihomeBackend.Models;
 using NihomeBackend.Services.GoogleDrive;
@@ -9,10 +11,11 @@ public sealed class DriveTreeMigrationServiceTests : IDisposable
 {
     private readonly NihomeBackend.Data.AppDbContext db = DbContextFactory.CreateRelational();
     private readonly Mock<IGoogleDriveAdapter> drive = new();
+    private readonly Mock<IProjectDriveFolderService> folders = new();
     private readonly GoogleDriveOptions options = new();
 
     private DriveTreeMigrationService Service() =>
-        new(db, drive.Object, new TestGoogleDriveSettingsStore(options));
+        new(db, drive.Object, new TestGoogleDriveSettingsStore(options), folders.Object);
 
     public DriveTreeMigrationServiceTests()
     {
@@ -21,7 +24,12 @@ public sealed class DriveTreeMigrationServiceTests : IDisposable
                 true, false, false, true));
         drive.Setup(item => item.ListChildrenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
+        drive.Setup(item => item.GetMetadataAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string id, CancellationToken _) => Item(id));
     }
+
+    private static DriveItem Item(string id) =>
+        new(id, id + ".pdf", "application/pdf", 1, null, null, null, new Dictionary<string, string>(), false);
 
     private void UseLegacyFolders() => options.Folders = new GoogleDriveFolderOptions
     {
@@ -170,6 +178,221 @@ public sealed class DriveTreeMigrationServiceTests : IDisposable
         Assert.Empty(preview.Changes);
         Assert.DoesNotContain("DRIVE_TREE_ALREADY_STANDARD", preview.Blockers);
         Assert.Equal(1, preview.DocumentCount);
+    }
+
+    [Fact]
+    public async Task Preview_ignores_unclassified_documents_when_checking_placement()
+    {
+        var project = AddProject("OP-1");
+        AddDocument(project, ProjectDocumentCategory.Unclassified, "file-1", "anywhere");
+
+        var preview = await Service().PreviewAsync(CancellationToken.None);
+
+        Assert.Contains("DRIVE_TREE_ALREADY_STANDARD", preview.Blockers);
+    }
+
+    [Fact]
+    public async Task Preview_skips_an_old_folder_that_no_longer_exists()
+    {
+        UseLegacyFolders();
+        var project = AddProject("OP-1");
+        Bind(project, ProjectDocumentCategory.Survey, "f-gone");
+        Bind(project, ProjectDocumentCategory.Procurement, "f-procurement");
+        drive.Setup(item => item.GetMetadataAsync("f-gone", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DriveItem?)null);
+        drive.Setup(item => item.ListChildrenAsync("f-gone", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new GoogleApiException("drive", "File not found") { HttpStatusCode = System.Net.HttpStatusCode.NotFound });
+        drive.Setup(item => item.ListChildrenAsync("f-procurement", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Item("stray")]);
+
+        var preview = await Service().PreviewAsync(CancellationToken.None);
+
+        Assert.Equal(1, preview.UntrackedFileCount);
+    }
+
+    private GoogleDriveCredential AddLegacyCredential()
+    {
+        UseLegacyFolders();
+        var credential = new GoogleDriveCredential
+        {
+            Id = 1,
+            SurveyMediaFolder = "01_Khao_sat",
+            CrmPreDesignFolder = "01_CRM_PreDesign",
+            DesignConceptFolder = "02_Thiet_ke/01_So_bo_Concept",
+            DesignBasicFolder = "02_Thiet_ke/02_Co_so",
+            DesignShopDrawingFolder = "02_Thiet_ke/03_Chi_tiet_ShopDrawing",
+            LegalPermitsFolder = "03_Xin_phep_Phap_ly",
+            ConstructionAcceptanceFolder = "04_Thi_cong_Nghiem_thu",
+            ProcurementFolder = "05_Cung_ung_Vat_tu",
+            FinanceContractsFolder = "06_Tai_chinh_Hop_dong",
+            HandoverFolder = "08_BanGiao_BaoHanh",
+            RowVersion = [1],
+        };
+        db.GoogleDriveCredentials.Add(credential);
+        db.SaveChanges();
+        return credential;
+    }
+
+    /// <summary>One project on the legacy tree; EnsureTreeAsync binds new-{category} folders.</summary>
+    private OperationalProject LegacyProject()
+    {
+        AddLegacyCredential();
+        var project = AddProject("OP-1");
+        Bind(project, ProjectDocumentCategory.Survey, "old-survey");
+        Bind(project, ProjectDocumentCategory.FinanceContracts, "old-contract");
+        Bind(project, ProjectDocumentCategory.ConstructionAcceptance, "old-acceptance");
+        Bind(project, ProjectDocumentCategory.Handover, "old-handover");
+        folders.Setup(item => item.EnsureTreeAsync(It.IsAny<OperationalProject>(), It.IsAny<int?>(),
+                It.IsAny<CancellationToken>(), false))
+            .Returns((OperationalProject root, int? _, CancellationToken _, bool _) =>
+            {
+                foreach (var (category, id) in new[]
+                         {
+                             (ProjectDocumentCategory.Survey, "new-survey"),
+                             (ProjectDocumentCategory.FinanceContracts, "new-contract"),
+                             (ProjectDocumentCategory.ConstructionAcceptance, "new-acceptance"),
+                             (ProjectDocumentCategory.Handover, "new-handover"),
+                         })
+                    if (!db.ProjectDriveFolders.Any(f => f.OperationalProjectId == root.Id && f.Category == category))
+                        db.ProjectDriveFolders.Add(new ProjectDriveFolder
+                        {
+                            OperationalProjectId = root.Id,
+                            Category = category,
+                            DriveFolderId = id,
+                        });
+                db.SaveChanges();
+                return Task.CompletedTask;
+            });
+        return project;
+    }
+
+    [Fact]
+    public async Task Run_rebinds_every_project_and_moves_each_file_into_its_prd_v2_folder()
+    {
+        var project = LegacyProject();
+        var survey = AddDocument(project, ProjectDocumentCategory.Survey, "file-survey", "old-survey");
+        var contract = AddDocument(project, ProjectDocumentCategory.FinanceContracts, "file-contract", "old-contract");
+        // Re-categorised handover document still in the acceptance folder.
+        var handover = AddDocument(project, ProjectDocumentCategory.Handover, "file-handover", "old-acceptance");
+        AddDocument(project, ProjectDocumentCategory.Unclassified, "file-loose", "old-survey");
+
+        var result = await Service().RunAsync(7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.Completed, result.Status);
+        Assert.Equal(3, result.Moved);
+        drive.Verify(item => item.MoveAsync("file-survey", "new-survey", It.IsAny<CancellationToken>()), Times.Once);
+        drive.Verify(item => item.MoveAsync("file-contract", "new-contract", It.IsAny<CancellationToken>()), Times.Once);
+        drive.Verify(item => item.MoveAsync("file-handover", "new-handover", It.IsAny<CancellationToken>()), Times.Once);
+        drive.Verify(item => item.MoveAsync("file-loose", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        db.ChangeTracker.Clear();
+        Assert.Equal("new-survey", db.ProjectDocuments.Single(d => d.Id == survey.Id).DriveFolderId);
+        Assert.Equal("new-contract", db.ProjectDocuments.Single(d => d.Id == contract.Id).DriveFolderId);
+        Assert.Equal("new-handover", db.ProjectDocuments.Single(d => d.Id == handover.Id).DriveFolderId);
+        var settings = db.GoogleDriveCredentials.Single();
+        var standard = new GoogleDriveCredential();
+        Assert.Equal(standard.SurveyMediaFolder, settings.SurveyMediaFolder);
+        Assert.Equal(standard.FinanceContractsFolder, settings.FinanceContractsFolder);
+        Assert.Equal(standard.ConstructionAcceptanceFolder, settings.ConstructionAcceptanceFolder);
+        Assert.False(settings.Enabled);
+        var bindings = db.DriveTreeMigrationItems.Where(i => i.Kind == DriveTreeMigrationItemKind.Binding).ToList();
+        Assert.Equal(4, bindings.Count);
+        Assert.Contains(bindings, i => i.FromFolderId == "old-survey" && i.ToFolderId == "new-survey");
+        Assert.Equal(7, db.DriveTreeMigrations.Single().StartedByUserId);
+    }
+
+    [Fact]
+    public async Task Run_moves_untracked_files_from_old_folders()
+    {
+        LegacyProject();
+        drive.Setup(item => item.ListChildrenAsync("old-survey", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Item("stray")]);
+
+        var result = await Service().RunAsync(7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.Completed, result.Status);
+        drive.Verify(item => item.MoveAsync("stray", "new-survey", It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Contains(db.DriveTreeMigrationItems, i => i.Kind == DriveTreeMigrationItemKind.UntrackedFile
+            && i.DriveFileId == "stray" && i.MovedAt != null);
+    }
+
+    [Fact]
+    public async Task Run_records_a_missing_old_folder_and_continues()
+    {
+        LegacyProject();
+        drive.Setup(item => item.GetMetadataAsync("old-contract", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DriveItem?)null);
+        drive.Setup(item => item.ListChildrenAsync("old-survey", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Item("stray")]);
+
+        var result = await Service().RunAsync(7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.Completed, result.Status);
+        Assert.Equal("DRIVE_FOLDER_MISSING", db.DriveTreeMigrationItems.Single(i =>
+            i.Kind == DriveTreeMigrationItemKind.Binding && i.FromFolderId == "old-contract").SkipReason);
+        drive.Verify(item => item.MoveAsync("stray", "new-survey", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Run_skips_a_file_deleted_on_drive_and_continues()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "gone", "old-survey");
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-survey", "old-survey");
+        drive.Setup(item => item.GetMetadataAsync("gone", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DriveItem?)null);
+
+        var result = await Service().RunAsync(7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.Completed, result.Status);
+        Assert.Equal(1, result.Skipped);
+        Assert.Equal(1, result.Moved);
+        drive.Verify(item => item.MoveAsync("gone", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        drive.Verify(item => item.MoveAsync("file-survey", "new-survey", It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal("DRIVE_FILE_MISSING", db.DriveTreeMigrationItems.Single(i => i.DriveFileId == "gone").SkipReason);
+    }
+
+    [Fact]
+    public async Task Run_resumes_after_a_drive_failure_without_moving_twice()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-1", "old-survey");
+        AddDocument(project, ProjectDocumentCategory.FinanceContracts, "file-2", "old-contract");
+        drive.SetupSequence(item => item.MoveAsync("file-2", "new-contract", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new GoogleApiException("drive", "Backend error"))
+            .Returns(Task.CompletedTask);
+
+        var first = await Service().RunAsync(7, CancellationToken.None);
+        Assert.Equal(DriveTreeMigrationStatus.Failed, first.Status);
+        Assert.NotNull(first.Error);
+
+        var second = await Service().RunAsync(7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.Completed, second.Status);
+        Assert.Equal(first.MigrationId, second.MigrationId);
+        Assert.Equal(2, second.Moved);
+        drive.Verify(item => item.MoveAsync("file-1", "new-survey", It.IsAny<CancellationToken>()), Times.Once);
+        drive.Verify(item => item.MoveAsync("file-2", "new-contract", It.IsAny<CancellationToken>()), Times.Exactly(2));
+        db.ChangeTracker.Clear();
+        Assert.All(db.ProjectDocuments, d => Assert.StartsWith("new-", d.DriveFolderId));
+    }
+
+    [Fact]
+    public async Task Run_refuses_while_sync_is_enabled()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-1", "old-survey");
+        options.Enabled = true;
+
+        var error = await Assert.ThrowsAsync<DriveTreeMigrationBlockedException>(() =>
+            Service().RunAsync(7, CancellationToken.None));
+
+        Assert.Equal("DRIVE_SYNC_ENABLED", error.Code);
+        drive.Verify(item => item.MoveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        folders.VerifyNoOtherCalls();
+        db.ChangeTracker.Clear();
+        Assert.Equal("01_Khao_sat", db.GoogleDriveCredentials.Single().SurveyMediaFolder);
+        Assert.Equal(4, db.ProjectDriveFolders.Count());
+        Assert.Empty(db.DriveTreeMigrations);
     }
 
     public void Dispose() => db.Dispose();

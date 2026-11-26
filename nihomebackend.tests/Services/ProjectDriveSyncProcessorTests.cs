@@ -1076,8 +1076,8 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     [Fact]
     public async Task FolderInitialization_BuildsEveryProjectTreeOnceWithoutFilesOrDesign()
     {
-        folders.Setup(item => item.EnsureTreeAsync(It.IsAny<OperationalProject>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
-            .Returns(async (OperationalProject root, int? actor, CancellationToken ct) =>
+        folders.Setup(item => item.EnsureTreeAsync(It.IsAny<OperationalProject>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()))
+            .Returns(async (OperationalProject root, int? actor, CancellationToken ct, bool requireEnabled) =>
             {
                 foreach (var category in Enum.GetValues<ProjectDocumentCategory>().Skip(1))
                     await EnsureBindingAsync(root, category, ct);
@@ -1090,7 +1090,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         Assert.Equal(0, await processor.InitializeProjectFoldersAsync(cursor));
         Assert.Equal(0, await processor.InitializeProjectFoldersAsync(0));
         folders.Verify(item => item.EnsureTreeAsync(It.IsAny<OperationalProject>(), It.IsAny<int?>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<CancellationToken>(), It.IsAny<bool>()), Times.Once);
     }
 
     [Fact]
@@ -1116,7 +1116,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
             db.Add(new OperationalProject { Code = $"NIC-FOLDER-{index}", Name = "NICON handoff", CustomerId = 10 });
         await db.SaveChangesAsync();
         var ids = await db.OperationalProjects.OrderBy(item => item.Id).Select(item => item.Id).ToListAsync();
-        folders.Setup(item => item.EnsureTreeAsync(It.IsAny<OperationalProject>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+        folders.Setup(item => item.EnsureTreeAsync(It.IsAny<OperationalProject>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()))
             .ThrowsAsync(new IOException("Temporary Drive outage"));
 
         var cursor = await processor.InitializeProjectFoldersAsync(0);
@@ -1126,7 +1126,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         Assert.Equal(0, await processor.InitializeProjectFoldersAsync(next));
         Assert.Equal(ids[4], await processor.InitializeProjectFoldersAsync(0));
         folders.Verify(item => item.EnsureTreeAsync(It.Is<OperationalProject>(root => root.Id == ids.Last()),
-            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()), Times.Once);
     }
 
     [Fact]

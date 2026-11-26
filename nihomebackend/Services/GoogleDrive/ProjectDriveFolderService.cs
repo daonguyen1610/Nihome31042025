@@ -13,7 +13,9 @@ public interface IProjectDriveFolderService
         CancellationToken ct = default);
 
     /// <summary>Creates the whole project folder tree and binds every category; safe to repeat.</summary>
-    Task EnsureTreeAsync(OperationalProject project, int? userId = null, CancellationToken ct = default);
+    /// <param name="requireEnabled">False only for the tree migration, which runs while sync is off.</param>
+    Task EnsureTreeAsync(OperationalProject project, int? userId = null, CancellationToken ct = default,
+        bool requireEnabled = true);
 }
 
 public sealed class ProjectDriveFolderService(
@@ -62,10 +64,11 @@ public sealed class ProjectDriveFolderService(
         }
     }
 
-    public async Task EnsureTreeAsync(OperationalProject project, int? userId = null, CancellationToken ct = default)
+    public async Task EnsureTreeAsync(OperationalProject project, int? userId = null, CancellationToken ct = default,
+        bool requireEnabled = true)
     {
         var options = await settingsStore.GetRuntimeAsync(ct);
-        if (!options.Enabled || string.IsNullOrWhiteSpace(options.RefreshToken) || string.IsNullOrWhiteSpace(options.RootFolderId))
+        if ((requireEnabled && !options.Enabled) || string.IsNullOrWhiteSpace(options.RefreshToken) || string.IsNullOrWhiteSpace(options.RootFolderId))
             throw new ProjectDriveNotConnectedException();
         foreach (var category in Enum.GetValues<ProjectDocumentCategory>()
                      .Where(category => category != ProjectDocumentCategory.Unclassified))

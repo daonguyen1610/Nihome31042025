@@ -110,6 +110,26 @@ public sealed class GoogleDriveOptionsTests
     }
 
     [Fact]
+    public async Task ProjectFolderService_TreeCanBuildWhileSyncIsOffWhenAsked()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var drive = new Mock<IGoogleDriveAdapter>();
+        drive.Setup(item => item.EnsureFolderPathAsync(
+                It.IsAny<IReadOnlyList<DriveFolderSegment>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<DriveFolderSegment> segments, CancellationToken _) =>
+                new DriveFolder("id-" + segments[^1].AppProperties["niconFolderPath"], null!));
+        var service = new ProjectDriveFolderService(db, drive.Object, new TestGoogleDriveSettingsStore(
+            new GoogleDriveOptions { Enabled = false, RefreshToken = "token", RootFolderId = "root-folder", InstanceId = "test" }));
+        var project = new OperationalProject { Id = 1, Code = "PJ-1", Name = "P" };
+
+        await Assert.ThrowsAsync<ProjectDriveNotConnectedException>(() => service.EnsureTreeAsync(project));
+        await service.EnsureTreeAsync(project, requireEnabled: false);
+
+        Assert.Equal(10, await db.ProjectDriveFolders.CountAsync());
+    }
+
+    [Fact]
     public void ExtraTreePaths_StayEmptyForAnOlderCustomTopology()
     {
         Assert.Equal(6, new GoogleDriveFolderOptions().ExtraTreePaths().Count());
