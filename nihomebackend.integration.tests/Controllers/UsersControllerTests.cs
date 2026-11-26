@@ -231,4 +231,94 @@ public class UsersControllerTests : IntegrationTestBase
             }
         });
     }
+
+    [Fact]
+    public async Task List_FiltersByTheDepartmentThatFollowsTheUsersRole()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var (crmId, designId) = WithDb(db => (
+            db.RoleGroups.Single(group => group.Code == "CRM").Id,
+            db.RoleGroups.Single(group => group.Code == "DESIGN").Id));
+        var phone = "0986" + new Random().Next(100000, 999999);
+        var created = await Client.PostAsJsonAsync("/api/users", new
+        {
+            phoneNumber = phone,
+            fullName = "Nhân viên kinh doanh mới",
+            email = $"{phone}@nicon.test",
+            password = "P@ssword1",
+            role = "SALE",
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+
+        async Task<bool> ListedIn(int departmentId)
+        {
+            var body = await ReadJsonAsync(await Client.GetAsync($"/api/users?departmentId={departmentId}&search={phone}"));
+            return body.GetProperty("items").EnumerateArray().Any();
+        }
+
+        (await ListedIn(crmId)).Should().BeTrue();
+        (await ListedIn(designId)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CreateAndRoleChange_ReturnTheDepartmentOfTheNewRole()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var (crmId, designId) = WithDb(db => (
+            db.RoleGroups.Single(group => group.Code == "CRM").Id,
+            db.RoleGroups.Single(group => group.Code == "DESIGN").Id));
+        var phone = "0984" + new Random().Next(100000, 999999);
+
+        var created = await Client.PostAsJsonAsync("/api/users", new
+        {
+            phoneNumber = phone,
+            fullName = "Nhân viên mới",
+            email = $"{phone}@nicon.test",
+            password = "P@ssword1",
+            role = "SALE",
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var createdBody = await ReadJsonAsync(created);
+        createdBody.GetProperty("departmentId").GetInt32().Should().Be(crmId);
+        var id = createdBody.GetProperty("id").GetInt32();
+
+        var moved = await Client.PutAsJsonAsync($"/api/users/{id}", new { role = "ARCHITECT" });
+        moved.StatusCode.Should().Be(HttpStatusCode.OK, await moved.Content.ReadAsStringAsync());
+        var movedBody = await ReadJsonAsync(moved);
+        movedBody.GetProperty("departmentId").GetInt32().Should().Be(designId);
+        movedBody.GetProperty("departmentLabelKey").GetString().Should().Be("rbac.group.design");
+
+        var left = await Client.PutAsJsonAsync($"/api/users/{id}", new { role = "ADMIN" });
+        left.StatusCode.Should().Be(HttpStatusCode.OK, await left.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(left)).GetProperty("departmentId").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task RoleGroupDeletionImpact_IsBlockedWhileSomeoneBelongsToTheDepartment()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var groupId = await WithDbAsync(async db =>
+        {
+            // A custom department with no role, and a person assigned to it directly.
+            var group = new RoleGroup { Code = $"DEPT-{Guid.NewGuid():N}"[..20], LabelKey = "rbac.group.custom.test" };
+            db.RoleGroups.Add(group);
+            await db.SaveChangesAsync();
+            db.Users.Add(new ApplicationUser
+            {
+                PhoneNumber = "0985" + new Random().Next(100000, 999999),
+                Email = $"{Guid.NewGuid():N}@nicon.test",
+                FullName = "Người thuộc phòng thử",
+                DepartmentRoleGroupId = group.Id,
+            });
+            await db.SaveChangesAsync();
+            return group.Id;
+        });
+
+        var response = await Client.GetAsync($"/api/admin/rbac/role-groups/{groupId}/deletion-impact");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var impact = await ReadJsonAsync(response);
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.ToString().Should().Contain("roleGroups.users");
+    }
 }

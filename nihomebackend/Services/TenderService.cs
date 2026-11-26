@@ -54,8 +54,8 @@ public class TenderService(
                 RoleCode = item.Preparer!.RoleEntity != null ? item.Preparer!.RoleEntity.Code : item.Preparer!.Role.ToString(),
                 RoleName = item.Preparer!.RoleEntity != null ? item.Preparer!.RoleEntity.Name : item.Preparer!.Role.ToString(),
                 RoleLabelKey = item.Preparer!.RoleEntity != null ? item.Preparer!.RoleEntity.LabelKey : null,
-                DepartmentId = item.Preparer!.RoleEntity != null && item.Preparer!.RoleEntity.RoleGroup != null && item.Preparer!.RoleEntity.RoleGroup.IsActive ? item.Preparer!.RoleEntity.RoleGroupId : null,
-                DepartmentLabelKey = item.Preparer!.RoleEntity != null && item.Preparer!.RoleEntity.RoleGroup != null && item.Preparer!.RoleEntity.RoleGroup.IsActive ? item.Preparer!.RoleEntity.RoleGroup.LabelKey : null,
+                DepartmentId = item.Preparer!.Department != null && item.Preparer!.Department.IsActive ? item.Preparer!.DepartmentRoleGroupId : null,
+                DepartmentLabelKey = item.Preparer!.Department != null && item.Preparer!.Department.IsActive ? item.Preparer!.Department.LabelKey : null,
             })
 .Distinct().OrderBy(item => item.FullName)
             .ToListAsync(ct);
@@ -229,8 +229,8 @@ public class TenderService(
                 RoleCode = user.RoleEntity != null ? user.RoleEntity.Code : user.Role.ToString(),
                 RoleName = user.RoleEntity != null ? user.RoleEntity.Name : user.Role.ToString(),
                 RoleLabelKey = user.RoleEntity != null ? user.RoleEntity.LabelKey : null,
-                DepartmentId = user.RoleEntity != null && user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroupId : null,
-                DepartmentLabelKey = user.RoleEntity != null && user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroup.LabelKey : null,
+                DepartmentId = user.Department != null && user.Department.IsActive ? user.DepartmentRoleGroupId : null,
+                DepartmentLabelKey = user.Department != null && user.Department.IsActive ? user.Department.LabelKey : null,
             })
             .ToListAsync(ct);
 

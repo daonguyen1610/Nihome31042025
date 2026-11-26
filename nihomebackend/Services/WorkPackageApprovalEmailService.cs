@@ -150,8 +150,8 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
                 user.Email,
                 RoleLabelKey = user.RoleEntity == null ? null : user.RoleEntity.LabelKey,
                 RoleName = user.RoleEntity == null ? null : user.RoleEntity.Name,
-                DepartmentLabelKey = user.RoleEntity == null || user.RoleEntity.RoleGroup == null
-                    ? null : user.RoleEntity.RoleGroup.LabelKey,
+                DepartmentLabelKey = user.Department == null
+                    ? null : user.Department.LabelKey,
             }).ToListAsync(ct);
         return users
             .Where(user => ContactValidation.IsValidEmail(user.Email!))

@@ -322,7 +322,7 @@ public sealed class ProjectScheduleService(
             return project.ProjectManagerUserId == userId && await db.Users.AsNoTracking().AnyAsync(user => user.Id == userId && user.IsActive && user.Email != null, ct);
         return await db.Users.AsNoTracking().AnyAsync(user => user.Id == userId && user.IsActive && user.Email != null && user.RoleEntity != null &&
             user.RoleEntity.IsActive && user.RoleEntity.Code == RbacRoleCodes.SalesManager &&
-            user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.Code == RoleGroupCodes.Crm &&
+            user.Department != null && user.Department.Code == RoleGroupCodes.Crm &&
             user.RoleEntity.RolePermissions.Any(grant => grant.Permission.IsActive &&
                 grant.Permission.Module == "crm.opportunities" && grant.Permission.Action == "manage"), ct);
     }
@@ -628,7 +628,7 @@ public sealed class ProjectScheduleService(
                 .ToListAsync(ct)
             : await db.Users.AsNoTracking().Where(user => user.IsActive && user.Email != null && user.RoleEntity != null &&
                     user.RoleEntity.IsActive && user.RoleEntity.Code == RbacRoleCodes.SalesManager &&
-                    user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.Code == RoleGroupCodes.Crm &&
+                    user.Department != null && user.Department.Code == RoleGroupCodes.Crm &&
                     user.RoleEntity.RolePermissions.Any(grant => grant.Permission.IsActive &&
                         grant.Permission.Module == "crm.opportunities" && grant.Permission.Action == "manage"))
                 .OrderBy(user => user.FullName).Select(user => new ProjectScheduleApproverResponse

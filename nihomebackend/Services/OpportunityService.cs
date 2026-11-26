@@ -206,8 +206,8 @@ public class OpportunityService(
                 RoleCode = user.RoleEntity!.Code,
                 RoleName = user.RoleEntity.Name,
                 RoleLabelKey = user.RoleEntity.LabelKey,
-                DepartmentId = user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroupId : null,
-                DepartmentLabelKey = user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroup.LabelKey : null,
+                DepartmentId = user.Department != null && user.Department.IsActive ? user.DepartmentRoleGroupId : null,
+                DepartmentLabelKey = user.Department != null && user.Department.IsActive ? user.Department.LabelKey : null,
             })
             .ToListAsync(ct);
 

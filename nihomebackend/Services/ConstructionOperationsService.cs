@@ -222,8 +222,8 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
                 RoleCode = x.RoleEntity != null ? x.RoleEntity.Code : x.Role.ToString(),
                 RoleName = x.RoleEntity != null ? x.RoleEntity.Name : x.Role.ToString(),
                 RoleLabelKey = x.RoleEntity != null ? x.RoleEntity.LabelKey : null,
-                DepartmentId = x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup.IsActive ? x.RoleEntity.RoleGroupId : null,
-                DepartmentLabelKey = x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup.IsActive ? x.RoleEntity.RoleGroup.LabelKey : null,
+                DepartmentId = x.Department != null && x.Department.IsActive ? x.DepartmentRoleGroupId : null,
+                DepartmentLabelKey = x.Department != null && x.Department.IsActive ? x.Department.LabelKey : null,
             })
             .OrderBy(x => x.Name)
             .ToListAsync(ct);

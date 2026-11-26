@@ -258,6 +258,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             .WithMany()
             .HasForeignKey(u => u.RoleEntityId)
             .OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.Entity<ApplicationUser>()
+            .HasOne(u => u.Department)
+            .WithMany()
+            .HasForeignKey(u => u.DepartmentRoleGroupId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Role>().ToTable("roles");
         modelBuilder.Entity<Role>().HasKey(r => r.Id);
@@ -3638,5 +3643,75 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
         modelBuilder.Entity<EntityTranslation>().ToTable("entity_translations");
         modelBuilder.Entity<EntityTranslation>().HasKey(t => t.Id);
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        SyncUserDepartments();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        SyncUserDepartments();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    /// <summary>
+    /// A role that belongs to a department decides its holder's department, so every write path
+    /// (services, seeders, tests) stays consistent. A role without a department keeps only a
+    /// department chosen in the same save; otherwise it is cleared, so nobody keeps heading a
+    /// department they have left. To keep the current value, mark the property modified.
+    /// </summary>
+    // shortcut: synchronous lookups, also under SaveChangesAsync; they run only when a user is
+    // created or changes role, or a role changes department. Make async if that becomes frequent.
+    private void SyncUserDepartments()
+    {
+        foreach (var role in ChangeTracker.Entries<Role>()
+                     .Where(entry => entry.State == EntityState.Modified &&
+                         entry.Property(item => item.RoleGroupId).IsModified)
+                     .Select(entry => entry.Entity).ToList())
+            foreach (var holder in Users.Where(user => user.RoleEntityId == role.Id).ToList()
+                         .Where(user => user.RoleEntityId == role.Id))
+                SetDepartment(holder, role.RoleGroup, role.RoleGroupId);
+
+        foreach (var entry in ChangeTracker.Entries<ApplicationUser>()
+                     .Where(entry => entry.State == EntityState.Added ||
+                         entry.State == EntityState.Modified && entry.Property(user => user.RoleEntityId).IsModified)
+                     .ToList())
+        {
+            var user = entry.Entity;
+            RoleGroup? group = null;
+            int? groupId = null;
+            // Trust the navigation only when it is the role the id points at; a changed id may leave it stale.
+            if (user.RoleEntity is { } role && (user.RoleEntityId is null || role.Id == user.RoleEntityId))
+                (group, groupId) = (role.RoleGroup, role.RoleGroupId);
+            else if (user.RoleEntityId is int roleId)
+            {
+                var local = Roles.Local.FirstOrDefault(item => item.Id == roleId);
+                (group, groupId) = (local?.RoleGroup, local is not null
+                    ? local.RoleGroupId
+                    : Roles.AsNoTracking().Where(item => item.Id == roleId).Select(item => item.RoleGroupId).FirstOrDefault());
+            }
+
+            if (group is not null || groupId is not null)
+                SetDepartment(user, group, groupId);
+            else if (entry.State == EntityState.Modified &&
+                     !entry.Property(item => item.DepartmentRoleGroupId).IsModified)
+                SetDepartment(user, null, null);
+        }
+    }
+
+    // Prefer the navigation: a department added in the same save only has a temporary key until then.
+    private static void SetDepartment(ApplicationUser user, RoleGroup? group, int? groupId)
+    {
+        if (group is not null)
+        {
+            user.Department = group;
+            return;
+        }
+
+        if (groupId is null) user.Department = null;
+        user.DepartmentRoleGroupId = groupId;
     }
 }

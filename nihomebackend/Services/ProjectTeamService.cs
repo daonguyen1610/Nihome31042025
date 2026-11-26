@@ -127,8 +127,8 @@ public sealed class ProjectTeamService(
                 RoleCode = user.RoleEntity != null ? user.RoleEntity.Code : user.Role.ToString(),
                 RoleName = user.RoleEntity != null ? user.RoleEntity.Name : user.Role.ToString(),
                 RoleLabelKey = user.RoleEntity != null ? user.RoleEntity.LabelKey : null,
-                DepartmentId = user.RoleEntity != null && user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroupId : null,
-                DepartmentLabelKey = user.RoleEntity != null && user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroup.LabelKey : null,
+                DepartmentId = user.Department != null && user.Department.IsActive ? user.DepartmentRoleGroupId : null,
+                DepartmentLabelKey = user.Department != null && user.Department.IsActive ? user.Department.LabelKey : null,
             })
             .ToListAsync(ct);
     }
@@ -791,7 +791,9 @@ public sealed class ProjectTeamService(
     private IQueryable<OperationalProjectMember> MemberQuery(int projectId) =>
         db.OperationalProjectMembers.AsNoTracking()
             .Include(item => item.User)
-                .ThenInclude(user => user.RoleEntity).ThenInclude(role => role!.RoleGroup)
+                .ThenInclude(user => user.RoleEntity)
+            .Include(item => item.User)
+                .ThenInclude(user => user.Department)
             .Include(item => item.ReportsToMember)!
                 .ThenInclude(item => item!.User)
             .Include(item => item.Roles)
@@ -853,8 +855,8 @@ public sealed class ProjectTeamService(
         RoleCode = member.User.RoleEntity?.Code ?? member.User.Role.ToString(),
         RoleName = member.User.RoleEntity?.Name ?? member.User.Role.ToString(),
         RoleLabelKey = member.User.RoleEntity?.LabelKey,
-        DepartmentId = member.User.RoleEntity?.RoleGroup is { IsActive: true } group ? group.Id : null,
-        DepartmentLabelKey = member.User.RoleEntity?.RoleGroup is { IsActive: true } department ? department.LabelKey : null,
+        DepartmentId = member.User.Department is { IsActive: true } group ? group.Id : null,
+        DepartmentLabelKey = member.User.Department is { IsActive: true } department ? department.LabelKey : null,
         Email = member.User.Email,
         Position = member.Position,
         ReportsToMemberId = member.ReportsToMemberId,

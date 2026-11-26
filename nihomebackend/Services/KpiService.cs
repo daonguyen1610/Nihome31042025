@@ -23,8 +23,8 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
                 RoleCode = user.RoleEntity != null ? user.RoleEntity.Code : user.Role.ToString(),
                 RoleName = user.RoleEntity != null ? user.RoleEntity.Name : user.Role.ToString(),
                 RoleLabelKey = user.RoleEntity != null ? user.RoleEntity.LabelKey : null,
-                DepartmentId = user.RoleEntity != null && user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroupId : null,
-                DepartmentLabelKey = user.RoleEntity != null && user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroup.LabelKey : null,
+                DepartmentId = user.Department != null && user.Department.IsActive ? user.DepartmentRoleGroupId : null,
+                DepartmentLabelKey = user.Department != null && user.Department.IsActive ? user.Department.LabelKey : null,
             })
             .OrderBy(user => user.Name)
             .ToListAsync(ct);

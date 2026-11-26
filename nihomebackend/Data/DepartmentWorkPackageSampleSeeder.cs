@@ -32,12 +32,12 @@ public static class DepartmentWorkPackageSampleSeeder
 
         var leadCandidates = db.Users
             .Where(user => user.IsActive && user.RoleEntity != null && user.RoleEntity.IsActive &&
-                user.RoleEntity.RoleGroupId != null && user.RoleEntity.RolePermissions.Any(rolePermission =>
+                user.DepartmentRoleGroupId != null && user.RoleEntity.RolePermissions.Any(rolePermission =>
                     rolePermission.Permission.IsActive &&
                     rolePermission.Permission.Module == "work.packages" &&
                     rolePermission.Permission.Action == "assign"))
             .OrderBy(user => user.Id)
-            .Select(user => new { UserId = user.Id, GroupId = user.RoleEntity!.RoleGroupId!.Value })
+            .Select(user => new { UserId = user.Id, GroupId = user.DepartmentRoleGroupId!.Value })
             .ToList();
         var selected = leadCandidates
             .Select(candidate => new
@@ -46,7 +46,7 @@ public static class DepartmentWorkPackageSampleSeeder
                 candidate.GroupId,
                 AssigneeId = db.Users.Where(user => user.IsActive && user.Id != candidate.UserId &&
                         user.RoleEntity != null && user.RoleEntity.IsActive &&
-                        user.RoleEntity.RoleGroupId == candidate.GroupId)
+                        user.DepartmentRoleGroupId == candidate.GroupId)
                     .OrderBy(user => user.Id).Select(user => user.Id).FirstOrDefault(),
             })
             .FirstOrDefault(candidate => candidate.AssigneeId != 0);
