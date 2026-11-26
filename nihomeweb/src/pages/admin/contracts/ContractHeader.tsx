@@ -148,8 +148,16 @@ export const ContractHeader = ({
 
       <dl className="grid divide-y rounded-lg border bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         {facts.map((fact) => (
-          <div key={fact.label} className="flex flex-col justify-between gap-1 p-4">
-            <dt className="text-xs text-muted-foreground">{fact.label}</dt>
+          <div
+            key={fact.label}
+            className={cn(
+              "flex flex-col justify-between gap-1 p-4",
+              fact === facts[0] && "tone-gradient rounded-t-lg sm:rounded-l-lg sm:rounded-tr-none",
+            )}
+          >
+            <dt className={cn("text-xs", fact !== facts[0] && "text-muted-foreground")}>
+              {fact.label}
+            </dt>
             <dd className={cn("text-lg font-semibold tabular-nums", fact.className)}>
               {fact.value}
             </dd>

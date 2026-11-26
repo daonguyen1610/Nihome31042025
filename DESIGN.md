@@ -142,7 +142,8 @@ to apply; it does not claim that every screen already meets it.
 
 ## Colors
 
-Mostly neutral working surfaces, one red voice for action, and five status tones.
+Neutral records on a coloured frame: module colour for place, one red voice for
+action, and the status tones.
 
 Values are the source HSL values. Use semantic Tailwind utilities and CSS
 variables in product code, never literal values or raw palette classes such as
@@ -180,14 +181,39 @@ is a tone **and** a written label.
 
 ### Construction lifecycles
 
-| Lifecycle  | State interpretation                                                                        |
-| ---------- | ------------------------------------------------------------------------------------------- |
-| CM review  | Draft neutral; pending info; approved success; rejected danger                              |
-| HSE        | Reported info; confirmed warning (still open); remediated indigo; closed success            |
-| Punch list | Open neutral; in progress info; fixed warning until verified; verified success              |
-| Acceptance | Draft or cancelled neutral; submitted info; approved success; rejected danger               |
+| Lifecycle  | State interpretation                                                             |
+| ---------- | -------------------------------------------------------------------------------- |
+| CM review  | Draft neutral; pending info; approved success; rejected danger                   |
+| HSE        | Reported info; confirmed warning (still open); remediated indigo; closed success |
+| Punch list | Open neutral; in progress info; fixed warning until verified; verified success   |
+| Acceptance | Draft or cancelled neutral; submitted info; approved success; rejected danger    |
 
 `constructionStatus.ts` holds these maps. Missing actual progress is not 0%.
+
+### Module colour
+
+Chosen on 2026-11-27: the workspace should feel lively, so each area has one
+colour that follows the person from the menu to the page.
+
+| Area                 | Tone    | Area               | Tone    |
+| -------------------- | ------- | ------------------ | ------- |
+| Dashboard, analytics | indigo  | Construction (BCH) | cyan    |
+| CRM                  | blue    | CM office          | teal    |
+| Design               | violet  | Content            | pink    |
+| Procurement          | orange  | Branding           | fuchsia |
+| Finance              | emerald | Processes, config  | slate   |
+| Legal                | amber   | Users              | indigo  |
+
+The tone colours the menu icon and active item, the page icon and the wash behind
+the top of the page, table headings, row hover, active tabs and quick-view counts.
+Headline numbers use the gradient `StatTile`. `lib/moduleTheme.ts` maps areas;
+`index.css` (`.tone-*`) holds the values.
+
+Gradients carry white text at 4.5:1 or better at both ends. Coloured text on a
+tint uses `--tone-ink` (85% tone with black). Check both when adding a tone.
+Module colour says **where you are**; status tones say **what state a record is
+in**. A status never takes its colour from the module, and red stays the main
+action.
 
 ### Named Rules
 
@@ -300,8 +326,10 @@ popovers, menus, select lists and toasts.
 
 ### Named Rules
 
-**The Flat Work Surface Rule.** No shadow, glow, gradient, hover lift or blur on
-cards, rows, forms or buttons. The translucent sticky top bar is the only blur.
+**The Flat Work Surface Rule.** Records, forms and tables stay flat: border and
+tone, no glow or blur. Gradient and a soft shadow belong only to `StatTile`, the
+page icon and the attention counts; a stat tile that opens a list may lift 2px on
+hover. The translucent sticky top bar is the only blur.
 
 **The No Nested Cards Rule.** Express subsections with headings, rows and
 separators.
@@ -434,5 +462,5 @@ decoration.
 - **Don't** invent records, formulas or counts to fill a dashboard, or call a
   list or chart complete when data is missing or truncated.
 - **Don't** close a dialog after a failed action or reset the user's work.
-- **Don't** add gradients, glow, nested cards or entrance animation to work
-  screens.
+- **Don't** put gradients on records, forms, buttons or table rows, and don't add
+  glow, nested cards or entrance animation to work screens.
