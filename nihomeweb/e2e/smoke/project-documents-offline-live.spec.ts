@@ -54,7 +54,10 @@ for (const width of [390, 768]) {
       const actions = page
         .getByTestId(`project-document-actions-${documentId}`)
         .filter({ visible: true });
-      const retry = actions
+      // The reason and its fix sit together in the file's own notice, not in the row actions.
+      const retry = page
+        .getByTestId(`project-document-notice-${documentId}`)
+        .filter({ visible: true })
         .getByRole("button", { name: new RegExp(fileName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) })
         .filter({ hasText: /Gửi lại|Send to Drive/i });
       await expect(retry).toBeVisible();
