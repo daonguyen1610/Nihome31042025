@@ -713,7 +713,7 @@ public sealed class BusinessRootHardDeletePlanService(
 
         return sidecar.SyncStatus switch
         {
-            ProjectDocumentSyncStatus.Synced =>
+            ProjectDocumentSyncStatus.Synced or ProjectDocumentSyncStatus.Missing or ProjectDocumentSyncStatus.Damaged =>
                 !string.IsNullOrWhiteSpace(instanceId) &&
                 !string.IsNullOrWhiteSpace(sidecar.DriveFileId) &&
                 !string.IsNullOrWhiteSpace(sidecar.DriveFolderId) && sidecar.Generation > 0,

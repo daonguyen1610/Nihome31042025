@@ -177,7 +177,15 @@ public sealed class RfqsController(RfqService service, IProjectAccessService acc
             !await db.RfqDocuments.AnyAsync(x => x.RfqId == id && x.Rfq.OperationalProjectId == projectId && x.ProjectDocumentId == documentId, ct))
             return NotFound();
         // Project scope has already been verified above, including team membership.
-        var file = await documents.DownloadAsync(projectId, documentId, UserId, true, ct);
+        ProjectDocumentDownload? file;
+        try
+        {
+            file = await documents.DownloadAsync(projectId, documentId, UserId, true, ct);
+        }
+        catch (ProjectDocumentFileMissingException exception)
+        {
+            return Conflict(new { code = "DRIVE_FILE_MISSING", message = exception.Message });
+        }
         if (file is null) return NotFound();
         audit.Log("proc.rfqs.download", "Rfq", id.ToString(), $"Downloaded document #{documentId} in project #{projectId}.");
         Response.ContentType = file.ContentType;

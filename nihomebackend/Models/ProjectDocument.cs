@@ -46,6 +46,8 @@ public class ProjectDocument
     public int? UpdatedByUserId { get; set; }
     public DateTime? DeletedAt { get; set; }
     public int? DeletedByUserId { get; set; }
+    /// <summary>Last time the background job confirmed this file on Drive.</summary>
+    public DateTime? DriveCheckedAt { get; set; }
     public byte[] RowVersion { get; set; } = [];
 }
 
@@ -58,6 +60,8 @@ public class ProjectDriveFolder
     public string DriveFolderId { get; set; } = string.Empty;
     public string? DriveWebViewLink { get; set; }
     public DateTime? LastReconciledAt { get; set; }
+    /// <summary>Set when the bound folder is in the Drive trash or no longer exists.</summary>
+    public DateTime? MissingSince { get; set; }
     public Guid? ReconciliationClaimToken { get; set; }
     public DateTime? ReconciliationClaimExpiresAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -109,5 +113,6 @@ public enum ProjectDocumentSourceType
 
 public enum ProjectDocumentOrigin { Nicon = 0, GoogleDrive = 1 }
 public enum ProjectDocumentDesiredOperation { None = 0, Upsert = 1, Delete = 2 }
-public enum ProjectDocumentSyncStatus { Pending = 0, Processing = 1, Synced = 2, Failed = 3, Deleted = 4, Conflict = 5 }
+// Missing: the file is gone from Drive. Damaged: it is there but empty or not the verified original.
+public enum ProjectDocumentSyncStatus { Pending = 0, Processing = 1, Synced = 2, Failed = 3, Deleted = 4, Conflict = 5, Missing = 6, Damaged = 7 }
 public enum ProjectDocumentConflictState { None = 0, PendingConfirmation = 1 }

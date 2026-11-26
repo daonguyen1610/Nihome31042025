@@ -21,6 +21,8 @@ public sealed class GoogleDriveOptions
     public bool DeleteDriveFilesOnWebDelete { get; set; }
     public bool DeleteWebRecordsOnDriveDelete { get; set; } = true;
     public int PollIntervalSeconds { get; set; } = 15;
+    /// <summary>How often each Drive-linked file is checked again (ADMIN setting).</summary>
+    public int FileCheckIntervalHours { get; set; } = 6;
     public string ConfigurationVersion { get; set; } = string.Empty;
 }
 

@@ -2,8 +2,9 @@ import { useUiError } from "@/hooks/useUiError";
 import { useUploadLimit } from "@/hooks/useUploadLimit";
 import { getUiError } from "@/lib/apiError";
 import { useConfirm } from "@/components/ui/confirmation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
+  AlertTriangle,
   Download,
   ExternalLink,
   FileText,
@@ -13,6 +14,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -60,7 +62,12 @@ const statusClass: Record<ProjectDocumentSyncStatus, string> = {
   Failed: "border-destructive/20 bg-destructive/10 text-destructive",
   Deleted: "border-border bg-muted/30 text-muted-foreground",
   Conflict: "border-orange-200 bg-orange-50 text-orange-700",
+  Missing: "border-destructive/20 bg-destructive/10 text-destructive",
+  Damaged: "border-warning/40 bg-warning-soft text-warning-strong",
 };
+
+const isLostOnDrive = (document: ProjectDocumentResponse) =>
+  document.syncStatus === "Missing" || document.syncStatus === "Damaged";
 
 type Props = {
   projectId: number;
@@ -238,7 +245,7 @@ export default function ProjectDocumentsPanel({
 
   const mutate = async (
     document: ProjectDocumentResponse,
-    action: "retry" | "classify" | "resolve" | "delete",
+    action: "retry" | "classify" | "resolve" | "delete" | "verify",
   ) => {
     if (
       action === "delete" &&
@@ -267,6 +274,7 @@ export default function ProjectDocumentsPanel({
     setBusyId(document.id);
     try {
       if (action === "retry") await adminApi.retryProjectDocument(projectId, document.id);
+      if (action === "verify") await adminApi.verifyProjectDocument(projectId, document.id);
       if (action === "classify")
         await adminApi.classifyProjectDocument(projectId, document.id, selectedCategory);
       if (action === "resolve")
@@ -313,6 +321,7 @@ export default function ProjectDocumentsPanel({
   };
 
   const canRetry = (document: ProjectDocumentResponse) =>
+    (document.syncStatus === "Missing" && Boolean(document.hasServerCopy)) ||
     document.syncStatus === "Failed" ||
     (document.syncStatus === "Pending" && Boolean(document.nextSyncAttemptAt));
 
@@ -322,83 +331,45 @@ export default function ProjectDocumentsPanel({
     return item ? t(item.translationKey) : value;
   };
 
-  const documentDetails = (document: ProjectDocumentResponse) => (
-    <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
-      <div>
-        <dt className="text-xs text-muted-foreground">
-          {t("operationalProjects.documents.field.category")}
-        </dt>
-        <dd>{categoryLabel(document.category)}</dd>
-      </div>
-      <div>
-        <dt className="text-xs text-muted-foreground">
-          {t("operationalProjects.documents.field.sourceModule")}
-        </dt>
-        <dd>{t(`operationalProjects.documents.sourceModule.${document.sourceModule}`)}</dd>
-      </div>
-      <div>
-        <dt className="text-xs text-muted-foreground">
-          {t("operationalProjects.documents.field.size")}
-        </dt>
-        <dd>{formatFileSize(document.size)}</dd>
-      </div>
-      <div>
-        <dt className="text-xs text-muted-foreground">
-          {t("operationalProjects.documents.field.origin")}
-        </dt>
-        <dd>{t(`operationalProjects.documents.origin.${document.origin}`)}</dd>
-      </div>
-      <div>
-        <dt className="text-xs text-muted-foreground">
-          {t("operationalProjects.documents.field.modifiedAt")}
-        </dt>
-        <dd>{formatDateTime(document.driveModifiedAt ?? document.updatedAt)}</dd>
-      </div>
-      <div>
-        <dt className="text-xs text-muted-foreground">
-          {t("operationalProjects.documents.field.status")}
-        </dt>
-        <dd>
-          <Badge variant="outline" className={statusClass[document.syncStatus]}>
-            {t(`operationalProjects.documents.syncStatus.${document.syncStatus}`)}
-          </Badge>
-        </dd>
-      </div>
-    </dl>
+  const statusBadge = (document: ProjectDocumentResponse) => (
+    <Badge variant="outline" className={cn("whitespace-nowrap", statusClass[document.syncStatus])}>
+      {t(`operationalProjects.documents.syncStatus.${document.syncStatus}`)}
+    </Badge>
   );
 
-  const actions = (document: ProjectDocumentResponse) => (
-    <div
-      className="flex flex-wrap items-center gap-2"
-      data-testid={`project-document-actions-${document.id}`}
-    >
-      {document.isDownloadable && (
+  // Reference data sits quietly under the file name so name, category, status and actions stay scannable.
+  const fileMeta = (document: ProjectDocumentResponse) => (
+    <div className="mt-0.5 text-xs font-normal text-muted-foreground">
+      <p>
+        {formatFileSize(document.size)} · {t("operationalProjects.documents.field.sourceModule")}:{" "}
+        {t(`operationalProjects.documents.sourceModule.${document.sourceModule}`)} ·{" "}
+        {t("operationalProjects.documents.field.origin")}:{" "}
+        {t(`operationalProjects.documents.origin.${document.origin}`)}
+      </p>
+      <p className="tabular-nums">
+        {t("operationalProjects.documents.field.modifiedAt")}:{" "}
+        {formatDateTime(document.driveModifiedAt ?? document.updatedAt)}
+      </p>
+    </div>
+  );
+
+  const hasNotice = (document: ProjectDocumentResponse) =>
+    Boolean(document.syncError) || isLostOnDrive(document);
+
+  const recoveryActions = (document: ProjectDocumentResponse) => (
+    <>
+      {canManage && isLostOnDrive(document) && (
         <Button
           size="sm"
           variant="outline"
-          onClick={() => void download(document)}
+          onClick={() => void mutate(document, "verify")}
           disabled={busyId === document.id}
-          aria-label={t("operationalProjects.documents.downloadAria", {
+          aria-label={t("operationalProjects.documents.verifyAria", {
             name: document.originalFileName,
           })}
         >
-          <Download className="mr-1.5 h-4 w-4" />
-          {t("operationalProjects.documents.download")}
-        </Button>
-      )}
-      {document.driveWebViewLink && (
-        <Button size="sm" variant="outline" asChild>
-          <a
-            href={document.driveWebViewLink}
-            target="_blank"
-            rel="noreferrer noopener"
-            aria-label={t("operationalProjects.documents.openDriveAria", {
-              name: document.originalFileName,
-            })}
-          >
-            <ExternalLink className="mr-1.5 h-4 w-4" />
-            {t("operationalProjects.documents.openDrive")}
-          </a>
+          <RefreshCcw className="mr-1.5 h-4 w-4" />
+          {t("operationalProjects.documents.verify")}
         </Button>
       )}
       {canManage && canRetry(document) && (
@@ -415,6 +386,88 @@ export default function ProjectDocumentsPanel({
           {t("operationalProjects.documents.retry")}
         </Button>
       )}
+    </>
+  );
+
+  // The reason and what to do about it, on their own full-width line.
+  const notice = (document: ProjectDocumentResponse) => {
+    const isError = document.syncStatus === "Missing" || document.syncStatus === "Failed";
+    return (
+      <>
+        {hasNotice(document) && (
+          <div
+            className={cn(
+              "flex flex-col gap-3 rounded-md p-3 sm:flex-row sm:items-center sm:justify-between",
+              isError ? "bg-destructive/5" : "bg-warning-soft",
+            )}
+            data-testid={`project-document-notice-${document.id}`}
+          >
+            <div className="flex min-w-0 items-start gap-2">
+              <AlertTriangle
+                aria-hidden="true"
+                className={cn(
+                  "mt-0.5 h-4 w-4 shrink-0",
+                  isError ? "text-destructive" : "text-warning-strong",
+                )}
+              />
+              <p className="max-w-[75ch] break-words text-sm font-normal text-foreground">
+                {document.syncError
+                  ? t(document.syncError)
+                  : t(`operationalProjects.documents.syncStatus.${document.syncStatus}`)}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2 pl-6 sm:pl-0">
+              {recoveryActions(document)}
+            </div>
+          </div>
+        )}
+        {document.unsupportedReason && (
+          <p className="max-w-[75ch] text-xs font-normal text-muted-foreground">
+            {document.unsupportedReason}
+          </p>
+        )}
+      </>
+    );
+  };
+
+  const actions = (document: ProjectDocumentResponse, variant: "ghost" | "outline") => (
+    <div
+      className={cn(
+        "flex items-center gap-1",
+        variant === "ghost" ? "flex-nowrap [&_a]:px-2 [&_button]:px-2" : "flex-wrap",
+      )}
+      data-testid={`project-document-actions-${document.id}`}
+    >
+      {document.isDownloadable && (document.syncStatus !== "Missing" || document.hasServerCopy) && (
+        <Button
+          size="sm"
+          variant={variant}
+          onClick={() => void download(document)}
+          disabled={busyId === document.id}
+          aria-label={t("operationalProjects.documents.downloadAria", {
+            name: document.originalFileName,
+          })}
+        >
+          <Download className="mr-1.5 h-4 w-4" />
+          {t("operationalProjects.documents.download")}
+        </Button>
+      )}
+      {document.driveWebViewLink && (
+        <Button size="sm" variant={variant} asChild>
+          <a
+            href={document.driveWebViewLink}
+            target="_blank"
+            rel="noreferrer noopener"
+            aria-label={t("operationalProjects.documents.openDriveAria", {
+              name: document.originalFileName,
+            })}
+          >
+            <ExternalLink className="mr-1.5 h-4 w-4" />
+            {t("operationalProjects.documents.openDrive")}
+          </a>
+        </Button>
+      )}
+      {!hasNotice(document) && recoveryActions(document)}
       {canManage && document.conflictState === "PendingConfirmation" && (
         <Button
           size="sm"
@@ -428,7 +481,8 @@ export default function ProjectDocumentsPanel({
       {canManage && document.sourceType !== "ExistingManagedFile" && (
         <Button
           size="sm"
-          variant="destructive"
+          variant={variant}
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
           onClick={() => void mutate(document, "delete")}
           disabled={busyId === document.id}
           aria-label={t("operationalProjects.documents.deleteAria", {
@@ -561,22 +615,39 @@ export default function ProjectDocumentsPanel({
         </div>
       ) : (
         <div data-testid="project-documents-list">
-          <div className="space-y-3 lg:hidden">
+          {documents.some(isLostOnDrive) && (
+            <div
+              role="alert"
+              className="mb-3 flex items-start gap-2 rounded-md bg-destructive/5 p-3"
+            >
+              <AlertTriangle
+                aria-hidden="true"
+                className="mt-0.5 h-4 w-4 shrink-0 text-destructive"
+              />
+              <p className="text-sm font-medium text-foreground">
+                {t("operationalProjects.documents.driveProblem.summary", {
+                  count: documents.filter(isLostOnDrive).length,
+                })}
+              </p>
+            </div>
+          )}
+          <div className="space-y-3 xl:hidden">
             {documents.map((document) => (
               <article key={document.id} className="space-y-3 rounded-md border p-4">
                 <div className="flex items-start gap-2">
                   <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <h3 className="min-w-0 break-all font-medium">{document.originalFileName}</h3>
+                  <div className="min-w-0">
+                    <h3 className="font-medium [overflow-wrap:anywhere]">
+                      {document.originalFileName}
+                    </h3>
+                    {fileMeta(document)}
+                  </div>
                 </div>
-                {documentDetails(document)}
-                {document.syncError && (
-                  <p className="break-words rounded bg-destructive/5 p-2 text-xs text-destructive">
-                    {t(document.syncError)}
-                  </p>
-                )}
-                {document.unsupportedReason && (
-                  <p className="text-xs text-muted-foreground">{document.unsupportedReason}</p>
-                )}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                  {statusBadge(document)}
+                  <span>{categoryLabel(document.category)}</span>
+                </div>
+                {notice(document)}
                 {document.category === "Unclassified" && canManage && (
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Select
@@ -611,99 +682,86 @@ export default function ProjectDocumentsPanel({
                     </Button>
                   </div>
                 )}
-                {actions(document)}
+                {actions(document, "outline")}
               </article>
             ))}
           </div>
-          <div className="hidden overflow-x-auto lg:block">
+          <div className="hidden overflow-x-auto xl:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="p-3">{t("operationalProjects.documents.field.fileName")}</th>
                   <th className="p-3">{t("operationalProjects.documents.field.category")}</th>
-                  <th className="p-3">{t("operationalProjects.documents.field.sourceModule")}</th>
-                  <th className="p-3">{t("operationalProjects.documents.field.size")}</th>
                   <th className="p-3">{t("operationalProjects.documents.field.status")}</th>
-                  <th className="p-3">{t("operationalProjects.documents.field.origin")}</th>
-                  <th className="p-3">{t("operationalProjects.documents.field.modifiedAt")}</th>
                   <th className="p-3">{t("operationalProjects.documents.field.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {documents.map((document) => (
-                  <tr key={document.id} className="border-b align-top">
-                    <td className="max-w-64 break-all p-3 font-medium">
-                      {document.originalFileName}
-                      {document.syncError && (
-                        <p className="mt-1 break-words text-xs font-normal text-destructive">
-                          {t(document.syncError)}
-                        </p>
+                  <Fragment key={document.id}>
+                    <tr
+                      className={cn(
+                        "align-top",
+                        !hasNotice(document) && !document.unsupportedReason && "border-b",
                       )}
-                      {document.unsupportedReason && (
-                        <p className="mt-1 text-xs font-normal text-muted-foreground">
-                          {document.unsupportedReason}
-                        </p>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      {document.category === "Unclassified" && canManage ? (
-                        <div className="min-w-48 space-y-2">
-                          <Select
-                            value={classifications[document.id] ?? ""}
-                            onValueChange={(value) =>
-                              setClassifications((current) => ({
-                                ...current,
-                                [document.id]: value,
-                              }))
-                            }
-                          >
-                            <SelectTrigger
-                              aria-label={t("operationalProjects.documents.classifyAria", {
-                                name: document.originalFileName,
-                              })}
+                    >
+                      <td className="min-w-56 p-3 font-medium [overflow-wrap:anywhere]">
+                        {document.originalFileName}
+                        {fileMeta(document)}
+                      </td>
+                      <td className="p-3">
+                        {document.category === "Unclassified" && canManage ? (
+                          <div className="min-w-48 space-y-2">
+                            <Select
+                              value={classifications[document.id] ?? ""}
+                              onValueChange={(value) =>
+                                setClassifications((current) => ({
+                                  ...current,
+                                  [document.id]: value,
+                                }))
+                              }
                             >
-                              <SelectValue
-                                placeholder={t("operationalProjects.documents.selectCategory")}
-                              />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories.map((item) => (
-                                <SelectItem key={item.value} value={item.value}>
-                                  {t(item.translationKey)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => void mutate(document, "classify")}
-                            disabled={busyId === document.id}
-                          >
-                            {t("operationalProjects.documents.classify")}
-                          </Button>
-                        </div>
-                      ) : (
-                        categoryLabel(document.category)
-                      )}
-                    </td>
-                    <td className="p-3">
-                      {t(`operationalProjects.documents.sourceModule.${document.sourceModule}`)}
-                    </td>
-                    <td className="p-3 whitespace-nowrap">{formatFileSize(document.size)}</td>
-                    <td className="p-3">
-                      <Badge variant="outline" className={statusClass[document.syncStatus]}>
-                        {t(`operationalProjects.documents.syncStatus.${document.syncStatus}`)}
-                      </Badge>
-                    </td>
-                    <td className="p-3">
-                      {t(`operationalProjects.documents.origin.${document.origin}`)}
-                    </td>
-                    <td className="p-3 whitespace-nowrap">
-                      {formatDateTime(document.driveModifiedAt ?? document.updatedAt)}
-                    </td>
-                    <td className="min-w-72 p-3">{actions(document)}</td>
-                  </tr>
+                              <SelectTrigger
+                                aria-label={t("operationalProjects.documents.classifyAria", {
+                                  name: document.originalFileName,
+                                })}
+                              >
+                                <SelectValue
+                                  placeholder={t("operationalProjects.documents.selectCategory")}
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map((item) => (
+                                  <SelectItem key={item.value} value={item.value}>
+                                    {t(item.translationKey)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void mutate(document, "classify")}
+                              disabled={busyId === document.id}
+                            >
+                              {t("operationalProjects.documents.classify")}
+                            </Button>
+                          </div>
+                        ) : (
+                          categoryLabel(document.category)
+                        )}
+                      </td>
+                      <td className="p-3">{statusBadge(document)}</td>
+                      <td className="w-px whitespace-nowrap p-2">{actions(document, "ghost")}</td>
+                    </tr>
+                    {(hasNotice(document) || document.unsupportedReason) && (
+                      <tr className="border-b">
+                        <td colSpan={4} className="space-y-2 px-3 pb-3">
+                          {notice(document)}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

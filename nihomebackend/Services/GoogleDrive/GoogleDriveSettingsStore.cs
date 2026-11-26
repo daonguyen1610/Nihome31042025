@@ -21,6 +21,7 @@ public sealed record GoogleDriveAdminConfigurationResponse(
     bool DeleteDriveFilesOnWebDelete,
     bool DeleteWebRecordsOnDriveDelete,
     int PollIntervalSeconds,
+    int FileCheckIntervalHours,
     string? AccountEmail,
     DateTime? ConnectedAt,
     string RowVersion);
@@ -40,6 +41,7 @@ public sealed class UpdateGoogleDriveConfigurationRequest
     public bool DeleteDriveFilesOnWebDelete { get; set; }
     public bool DeleteWebRecordsOnDriveDelete { get; set; } = true;
     public int PollIntervalSeconds { get; set; } = 15;
+    public int FileCheckIntervalHours { get; set; } = 6;
     public string? RowVersion { get; set; }
 }
 
@@ -104,6 +106,7 @@ public sealed class GoogleDriveSettingsStore(
             DeleteDriveFilesOnWebDelete = settings.DeleteDriveFilesOnWebDelete,
             DeleteWebRecordsOnDriveDelete = settings.DeleteWebRecordsOnDriveDelete,
             PollIntervalSeconds = settings.PollIntervalSeconds,
+            FileCheckIntervalHours = settings.FileCheckIntervalHours,
             ConfigurationVersion = ToVersion(settings.RowVersion),
         };
     }
@@ -200,6 +203,7 @@ public sealed class GoogleDriveSettingsStore(
         settings.DeleteDriveFilesOnWebDelete = normalized.DeleteDriveFilesOnWebDelete;
         settings.DeleteWebRecordsOnDriveDelete = normalized.DeleteWebRecordsOnDriveDelete;
         settings.PollIntervalSeconds = normalized.PollIntervalSeconds;
+        settings.FileCheckIntervalHours = normalized.FileCheckIntervalHours;
         settings.UpdatedByUserId = updatedByUserId;
         settings.UpdatedAt = DateTime.UtcNow;
 
@@ -366,6 +370,7 @@ public sealed class GoogleDriveSettingsStore(
             DeleteDriveFilesOnWebDelete = request.DeleteDriveFilesOnWebDelete,
             DeleteWebRecordsOnDriveDelete = request.DeleteWebRecordsOnDriveDelete,
             PollIntervalSeconds = request.PollIntervalSeconds,
+            FileCheckIntervalHours = request.FileCheckIntervalHours,
             RowVersion = request.RowVersion,
         };
 
@@ -389,6 +394,9 @@ public sealed class GoogleDriveSettingsStore(
         if (normalized.PollIntervalSeconds is < 5 or > 300)
             throw new GoogleDriveSettingsValidationException(
                 "PollIntervalSeconds phải từ 5 đến 300 giây. Ví dụ: 15.");
+        if (normalized.FileCheckIntervalHours is < 1 or > 168)
+            throw new GoogleDriveSettingsValidationException(
+                "FileCheckIntervalHours phải từ 1 đến 168 giờ. Ví dụ: 6.");
         ValidateOptionalDraft(normalized);
         if (!string.IsNullOrEmpty(normalized.FrontendReturnUrl))
             ValidateFrontendReturnUrl(normalized.FrontendReturnUrl);
@@ -572,7 +580,7 @@ public sealed class GoogleDriveSettingsStore(
         return new(false, string.Empty, false, false, string.Empty,
             defaults.FrontendReturnUrl, string.Empty, string.Empty, defaults.ApplicationName,
             defaults.Folders, defaults.SupportsAllDrives, defaults.DeleteDriveFilesOnWebDelete,
-            defaults.DeleteWebRecordsOnDriveDelete, defaults.PollIntervalSeconds,
+            defaults.DeleteWebRecordsOnDriveDelete, defaults.PollIntervalSeconds, defaults.FileCheckIntervalHours,
             null, null, string.Empty);
     }
 
@@ -591,6 +599,7 @@ public sealed class GoogleDriveSettingsStore(
         settings.DeleteDriveFilesOnWebDelete,
         settings.DeleteWebRecordsOnDriveDelete,
         settings.PollIntervalSeconds,
+        settings.FileCheckIntervalHours,
         settings.AccountEmail,
         settings.ConnectedAt,
         ToVersion(settings.RowVersion));

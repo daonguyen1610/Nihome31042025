@@ -181,7 +181,7 @@ const DriveStatusBadge = ({
           <TooltipTrigger asChild>
             <span>{badge}</span>
           </TooltipTrigger>
-          <TooltipContent className="max-w-xs break-words text-xs">{error}</TooltipContent>
+          <TooltipContent className="max-w-xs break-words text-xs">{t(error)}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );

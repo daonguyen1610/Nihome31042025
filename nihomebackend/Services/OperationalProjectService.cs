@@ -189,8 +189,12 @@ public class OperationalProjectService(
         var response = Map(project, approvedVoTotals, milestoneSummaries, displayCurrency, usdVndRate);
         response.CodeLocked = project.Contracts.Any(LocksProjectCodeInMemory);
         if (await db.GoogleDriveCredentials.AnyAsync(settings => settings.Enabled, ct))
-            response.DriveFoldersReady = await db.ProjectDriveFolders.CountAsync(folder =>
-                folder.OperationalProjectId == id, ct) >= Enum.GetValues<ProjectDocumentCategory>().Length - 1;
+        {
+            var folders = db.ProjectDriveFolders.Where(folder => folder.OperationalProjectId == id);
+            response.DriveFoldersDeleted = await folders.AnyAsync(folder => folder.MissingSince != null, ct);
+            response.DriveFoldersReady = !response.DriveFoldersDeleted.Value &&
+                await folders.CountAsync(ct) >= Enum.GetValues<ProjectDocumentCategory>().Length - 1;
+        }
         response.BusinessSectorName =
             await BusinessSectors.NameAsync(db, project.BusinessSectorCode, requestLanguage?.Lang ?? "vi", ct);
         if (!CanManage(project, callerUserId, canSeeAll) && !await db.OperationalProjectMemberRoles.AnyAsync(role =>
@@ -476,7 +480,7 @@ public class OperationalProjectService(
     {
         var project = await db.OperationalProjects.AsNoTracking().FirstOrDefaultAsync(item => item.Id == id, ct);
         if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
-        await driveFolders!.EnsureTreeAsync(project, callerUserId, ct);
+        await driveFolders!.RepairTreeAsync(project, callerUserId, ct);
         return await GetAsync(id, callerUserId, canSeeAll, ct);
     }
 

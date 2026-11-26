@@ -32,6 +32,7 @@ public class GoogleDriveCredential : IConcurrencyTracked
     public bool DeleteDriveFilesOnWebDelete { get; set; }
     public bool DeleteWebRecordsOnDriveDelete { get; set; } = true;
     public int PollIntervalSeconds { get; set; } = 15;
+    public int FileCheckIntervalHours { get; set; } = 6;
     public string? AccountEmail { get; set; }
     public int? ConnectedByUserId { get; set; }
     public DateTime? ConnectedAt { get; set; }

@@ -1190,9 +1190,27 @@ Hệ thống còn dùng đường dẫn mặc định cũ được tự chuyển
 | Công tắc | Bật | Tắt |
 |---|---|---|
 | **Xóa trên web → xóa trên Drive** (mặc định tắt) | Xóa tài liệu trên hệ thống thì chuyển tệp Drive vào thùng rác; xóa dự án thì xóa cây thư mục Drive rỗng đã kiểm | Tệp và thư mục Drive được giữ, chỉ gỡ liên kết |
-| **Xóa trên Drive → xóa trên web** (mặc định bật) | Tệp bị xóa hoặc chuyển vào thùng rác trên Drive được đánh dấu đã xóa trên web | Bản ghi trên web được giữ |
+| **Xóa trên Drive → xóa trên web** (mặc định bật) | Trong thư mục đang liên kết, tệp bị xóa hoặc chuyển vào thùng rác trên Drive được đánh dấu đã xóa trên web | Bản ghi trên web được giữ, chuyển sang **Không tìm thấy trên Drive** |
 
 Tệp tải lên chưa liên kết và chỉ có trên máy chủ bị xóa ngay. Tệp lạ, tệp dùng chung và tài liệu CRM độc lập được bảng ảnh hưởng bảo vệ khi xóa dự án.
+
+**Kiểm tra tệp trên Drive.** Hệ thống kiểm tra lại từng tệp đã đồng bộ theo **Chu kỳ kiểm tra tệp** trong Cài đặt Drive (mặc định 6 giờ, từ 1 đến 168), kể cả tệp nằm ở thư mục không còn liên kết. Việc kiểm tra chỉ đổi trạng thái, **không gỡ hồ sơ và không đụng tới Drive**; người vận hành quyết định bước tiếp theo. Lỗi mạng, hết thời gian chờ, thiếu quyền hay mất kết nối không làm đổi trạng thái. Riêng với thư mục đang liên kết, công tắc **Xóa trên Drive → xóa trên web** vẫn áp dụng như bảng trên (đối soát thư mục, thường trong vài phút).
+
+| Trạng thái | Khi nào | Cách xử lý |
+|---|---|---|
+| **Không tìm thấy trên Drive** | Tệp ở thùng rác, hoặc không còn thấy (đã xóa vĩnh viễn hay tài khoản đang kết nối không có quyền) | Khôi phục trên Drive rồi **Kiểm tra lại**; nếu máy chủ còn bản gốc thì **Gửi lại lên Drive** (tạo tệp mới; nếu sau đó khôi phục cả tệp cũ trong thư mục đang liên kết, nó có thể hiện thêm như tệp nhập từ Drive) |
+| **Tệp trên Drive không khớp** | Tệp rỗng (0 byte); hoặc nội dung khác bản đã tải lên, ở thư mục không còn liên kết | Khôi phục phiên bản đúng trên Drive rồi **Kiểm tra lại** |
+
+- Sửa nội dung tệp trong thư mục đang liên kết vẫn được cập nhật về như trước, không bị coi là lỗi.
+- **Tải xuống** dùng bản gốc trên máy chủ nếu còn. Không còn bản nào thì nút này ẩn; tệp tải trực tiếp thường không còn bản trên máy chủ sau khi đã đồng bộ.
+- Tệp có thể xóa theo quyền hiện có; tệp sinh từ phân hệ khác vẫn phải xóa hoặc thay ở phân hệ đó.
+- Bản ghi "Đã đồng bộ" nhưng chưa từng lên Drive được đưa lại vào hàng chờ khi máy chủ còn tệp; không còn tệp thì chuyển **Không tìm thấy trên Drive** và phải tải lên lại.
+- Trạng thái khảo sát tương ứng hiện **lỗi đồng bộ** kèm lý do. Hai bước yêu cầu tệp "Đã đồng bộ" (ví dụ trình duyệt thiết kế, phát hành IFC) không nhận tệp đang lỗi. Minh chứng chuẩn bị thi công, QA/QC và QS **chưa** bị chặn vì tệp lỗi.
+- Admin nhận thông báo **Google Drive: có tệp bị mất hoặc hỏng**, tối đa một lần trong 24 giờ. Mỗi lần đổi trạng thái được ghi nhật ký.
+
+**Thư mục dự án bị xóa trên Drive.** Hệ thống không tải tệp vào thư mục trong thùng rác: tệp chờ trên máy chủ và Admin được báo. Khôi phục thư mục trên Drive (tệp tự đồng bộ tiếp), hoặc bấm **Tạo lại thư mục** ở đầu trang dự án. Thư mục trong thùng rác không bị đụng tới.
+
+Tệp và thư mục trong thùng rác Drive [bị Google xóa vĩnh viễn sau 30 ngày](https://support.google.com/drive/answer/2375102), nên cần xử lý sớm.
 
 ### 3.8 Báo cáo và KPI
 

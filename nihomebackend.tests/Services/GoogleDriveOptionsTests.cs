@@ -117,6 +117,95 @@ public sealed class GoogleDriveOptionsTests
         drive.VerifyNoOtherCalls();
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ProjectFolderService_DeletedBoundFolder_IsRefusedUntilItIsBack(bool inTrash)
+    {
+        await using var db = nihomebackend.tests.Helpers.DbContextFactory.CreateRelational();
+        var (project, service, drive) = await BoundFolderAsync(db, ProjectDocumentCategory.Finance);
+        drive.Setup(item => item.GetMetadataAsync("bound-Finance", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(inTrash ? FolderItem("bound-Finance", trashed: true) : null);
+
+        await Assert.ThrowsAsync<ProjectDriveFolderMissingException>(() =>
+            service.EnsureAsync(project, ProjectDocumentCategory.Finance));
+        Assert.NotNull((await db.ProjectDriveFolders.AsNoTracking().SingleAsync()).MissingSince);
+
+        drive.Setup(item => item.GetMetadataAsync("bound-Finance", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(FolderItem("bound-Finance", trashed: false));
+        await service.EnsureAsync(project, ProjectDocumentCategory.Finance);
+
+        Assert.Null((await db.ProjectDriveFolders.AsNoTracking().SingleAsync()).MissingSince);
+        drive.Verify(item => item.EnsureFolderPathAsync(It.IsAny<IReadOnlyList<DriveFolderSegment>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProjectFolderService_Repair_RecreatesOnlyDeletedFolders()
+    {
+        await using var db = nihomebackend.tests.Helpers.DbContextFactory.CreateRelational();
+        var (project, service, drive) = await BoundFolderAsync(db,
+            ProjectDocumentCategory.Finance, ProjectDocumentCategory.Handover);
+        drive.Setup(item => item.GetMetadataAsync("bound-Finance", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(FolderItem("bound-Finance", trashed: true));
+        drive.Setup(item => item.GetMetadataAsync("bound-Handover", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(FolderItem("bound-Handover", trashed: false));
+        drive.Setup(item => item.EnsureFolderPathAsync(
+                It.IsAny<IReadOnlyList<DriveFolderSegment>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<DriveFolderSegment> segments, CancellationToken _) =>
+                new DriveFolder("new-" + segments[^1].AppProperties["niconFolderPath"], null!));
+        drive.Setup(item => item.CheckConnectionAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DriveConnection("integration@nicon.test", "root", "link", true, false, false, true));
+
+        await service.RepairTreeAsync(project);
+
+        var bindings = await db.ProjectDriveFolders.AsNoTracking().ToDictionaryAsync(item => item.Category);
+        Assert.Equal(Enum.GetValues<ProjectDocumentCategory>().Length - 1, bindings.Count);
+        Assert.Equal("new-07_TaiChinh", bindings[ProjectDocumentCategory.Finance].DriveFolderId);
+        Assert.Equal("bound-Handover", bindings[ProjectDocumentCategory.Handover].DriveFolderId);
+        Assert.All(bindings.Values, item => Assert.Null(item.MissingSince));
+        drive.Verify(item => item.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // With the wrong account every folder looks gone; dropping the links then would rebuild every tree.
+    [Fact]
+    public async Task ProjectFolderService_Repair_RefusesWhenTheRootIsNotWritable()
+    {
+        await using var db = nihomebackend.tests.Helpers.DbContextFactory.CreateRelational();
+        var (project, service, drive) = await BoundFolderAsync(db, ProjectDocumentCategory.Finance);
+        drive.Setup(item => item.CheckConnectionAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DriveConnection("other@nicon.test", "root", "link", true, false, false, false));
+
+        await Assert.ThrowsAsync<ProjectDriveNotConnectedException>(() => service.RepairTreeAsync(project));
+
+        Assert.Equal("bound-Finance", (await db.ProjectDriveFolders.AsNoTracking().SingleAsync()).DriveFolderId);
+        drive.Verify(item => item.GetMetadataAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static DriveItem FolderItem(string id, bool trashed) => new(
+        id, id, "application/vnd.google-apps.folder", null, "1", DateTime.UtcNow, null,
+        new Dictionary<string, string>(), trashed);
+
+    private static async Task<(OperationalProject, ProjectDriveFolderService, Mock<IGoogleDriveAdapter>)> BoundFolderAsync(
+        AppDbContext db, params ProjectDocumentCategory[] categories)
+    {
+        var project = new OperationalProject { Code = "PJ-2026-0001", Name = "Nhà xưởng", CustomerId = 1 };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync();
+        foreach (var category in categories)
+            db.ProjectDriveFolders.Add(new ProjectDriveFolder
+            {
+                OperationalProjectId = project.Id,
+                Category = category,
+                DriveFolderId = $"bound-{category}",
+            });
+        await db.SaveChangesAsync();
+        var drive = new Mock<IGoogleDriveAdapter>();
+        var service = new ProjectDriveFolderService(db, drive.Object, new TestGoogleDriveSettingsStore(
+            new GoogleDriveOptions { Enabled = true, RefreshToken = "token", RootFolderId = "root-folder", InstanceId = "test" }));
+        return (project, service, drive);
+    }
+
     [Fact]
     public void ProjectDocumentTranslations_PopulateAllSupportedLanguages()
     {

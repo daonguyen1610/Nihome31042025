@@ -25,9 +25,9 @@ public sealed class ProjectDocumentService(
     {
         var readable = await ReadableDocumentsAsync(projectId, callerUserId, canSeeAll, ct);
         if (readable is null) return null;
-        return await readable
-            .OrderBy(document => document.Category).ThenByDescending(document => document.UpdatedAt)
-            .Select(document => Map(document)).ToListAsync(ct);
+        var documents = await readable
+            .OrderBy(document => document.Category).ThenByDescending(document => document.UpdatedAt).ToListAsync(ct);
+        return documents.Select(Describe).ToList();
     }
 
     public async Task<IReadOnlyList<ProjectDocumentResponse>?> ListForDesignAsync(
@@ -39,7 +39,7 @@ public sealed class ProjectDocumentService(
         var readable = await ReadableDocumentsAsync(projectId, callerUserId, canSeeAll, ct);
         if (readable is null) return null;
         var hasSingleDesign = await db.DesignProjects.CountAsync(design => design.OperationalProjectId == projectId, ct) == 1;
-        return await readable.Where(document => document.SourceModule == ProjectDocumentSourceModule.Design &&
+        var documents = await readable.Where(document => document.SourceModule == ProjectDocumentSourceModule.Design &&
             (document.SourceEntityType == null && hasSingleDesign ||
              document.SourceEntityType == nameof(ConceptOption) && db.ConceptOptions.Any(source =>
                  source.Id == document.SourceRecordId && source.DesignProjectId == designProjectId) ||
@@ -47,8 +47,8 @@ public sealed class ProjectDocumentService(
                  source.Id == document.SourceRecordId && source.DesignProjectId == designProjectId) ||
              document.SourceEntityType == nameof(ShopDrawing) && db.ShopDrawings.Any(source =>
                  source.Id == document.SourceRecordId && source.DesignProjectId == designProjectId)))
-            .OrderBy(document => document.Category).ThenByDescending(document => document.UpdatedAt)
-            .Select(document => Map(document)).ToListAsync(ct);
+            .OrderBy(document => document.Category).ThenByDescending(document => document.UpdatedAt).ToListAsync(ct);
+        return documents.Select(Describe).ToList();
     }
 
     public async Task<ProjectDocumentResponse?> UploadAsync(
@@ -177,7 +177,12 @@ public sealed class ProjectDocumentService(
         if (document is null) return false;
         if (document.SyncStatus == ProjectDocumentSyncStatus.Processing)
             throw new ProjectDocumentConflictException("Tệp đang được đồng bộ. Vui lòng chờ lần xử lý hiện tại hoàn tất trước khi thử lại.");
-        if (document.DesiredOperation != ProjectDocumentDesiredOperation.Upsert ||
+        if (document.SyncStatus == ProjectDocumentSyncStatus.Missing && HasServerCopy(document))
+        {
+            PrepareNewDriveCopy(document);
+            document.SyncAttemptCount = 0;
+        }
+        else if (document.DesiredOperation != ProjectDocumentDesiredOperation.Upsert ||
             document.SyncStatus is not (ProjectDocumentSyncStatus.Failed or ProjectDocumentSyncStatus.Pending) ||
             document.SyncAttemptCount >= MaxSyncAttempts)
             throw new ProjectDocumentValidationException("Tệp không thể được đưa lại vào hàng đợi đồng bộ dự án.");
@@ -225,6 +230,10 @@ public sealed class ProjectDocumentService(
         if (readable is null) return null;
         var document = await readable.SingleOrDefaultAsync(item => item.Id == documentId, ct);
         if (document is null || !document.IsDownloadable) return null;
+        var lost = document.SyncStatus is ProjectDocumentSyncStatus.Missing or ProjectDocumentSyncStatus.Damaged;
+        if (lost && HasServerCopy(document))
+            return ServerCopy(projectId, document);
+        if (document.SyncStatus == ProjectDocumentSyncStatus.Missing) throw new ProjectDocumentFileMissingException();
         var stagedManualUpload = document.SourceType == ProjectDocumentSourceType.ManualUpload &&
             document.DesiredOperation == ProjectDocumentDesiredOperation.Upsert &&
             !string.IsNullOrWhiteSpace(document.LocalPath);
@@ -235,15 +244,7 @@ public sealed class ProjectDocumentService(
                 document.ContentType,
                 (destination, cancellationToken) => drive.DownloadAsync(document.DriveFileId, destination, cancellationToken));
         }
-        if (string.IsNullOrWhiteSpace(document.LocalPath)) return null;
-        return new ProjectDocumentDownload(
-            document.OriginalFileName,
-            document.ContentType,
-            async (destination, cancellationToken) =>
-            {
-                await using var source = storage.OpenRead(projectId, document.LocalPath);
-                await source.CopyToAsync(destination, cancellationToken);
-            });
+        return string.IsNullOrWhiteSpace(document.LocalPath) ? null : ServerCopy(projectId, document);
     }
 
     public async Task<ProjectDocumentResponse?> ClassifyAsync(
@@ -392,9 +393,15 @@ public sealed class ProjectDocumentService(
         if (document is null) return null;
         if (document.SyncStatus == ProjectDocumentSyncStatus.Processing)
             throw new ProjectDocumentConflictException("Tệp đang được đồng bộ. Vui lòng chờ trước khi thử lại.");
-        if (document.SyncStatus is not
+        if (document.SyncStatus == ProjectDocumentSyncStatus.Missing)
+        {
+            if (!HasServerCopy(document)) throw new ProjectDocumentFileMissingException();
+            PrepareNewDriveCopy(document);
+        }
+        else if (document.SyncStatus is not
             (ProjectDocumentSyncStatus.Failed or ProjectDocumentSyncStatus.Pending))
-            throw new ProjectDocumentValidationException("Chỉ tệp đang chờ hoặc đồng bộ lỗi mới có thể gửi lại.");
+            throw new ProjectDocumentValidationException(
+                "Chỉ tệp đang chờ, đồng bộ lỗi hoặc không còn trên Drive mà máy chủ còn bản gốc mới có thể gửi lại.");
         document.SyncStatus = ProjectDocumentSyncStatus.Pending;
         document.SyncAttemptCount = 0;
         document.NextSyncAttemptAt = DateTime.UtcNow;
@@ -602,6 +609,51 @@ public sealed class ProjectDocumentService(
         };
     }
 
+    // The screen offers Download and Send again for a lost file, so the server file must really be there.
+    private ProjectDocumentResponse Describe(ProjectDocument document)
+    {
+        var response = Map(document);
+        if (document.SyncStatus is ProjectDocumentSyncStatus.Missing or ProjectDocumentSyncStatus.Damaged)
+            response.HasServerCopy = HasServerCopy(document);
+        return response;
+    }
+
+    // A new copy: the lost Drive file stays where it is, so restoring it later destroys nothing.
+    private static void PrepareNewDriveCopy(ProjectDocument document)
+    {
+        document.DesiredOperation = ProjectDocumentDesiredOperation.Upsert;
+        document.Generation++;
+        document.DriveFileId = null;
+        document.DriveFolderId = null;
+        document.DriveWebViewLink = null;
+        document.DriveVersion = null;
+        document.DriveModifiedAt = null;
+    }
+
+    private ProjectDocumentDownload ServerCopy(int projectId, ProjectDocument document) => new(
+        document.OriginalFileName,
+        document.ContentType,
+        async (destination, cancellationToken) =>
+        {
+            await using var source = storage.OpenRead(projectId, document.LocalPath);
+            await source.CopyToAsync(destination, cancellationToken);
+        });
+
+    private bool HasServerCopy(ProjectDocument document)
+    {
+        if (string.IsNullOrWhiteSpace(document.LocalPath)) return false;
+        try
+        {
+            using var content = storage.OpenRead(document.OperationalProjectId, document.LocalPath);
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or
+            ProjectDocumentValidationException)
+        {
+            return false;
+        }
+    }
+
     internal static ProjectDocumentResponse Map(ProjectDocument document) => new()
     {
         Id = document.Id,
@@ -628,6 +680,8 @@ public sealed class ProjectDocumentService(
         NextSyncAttemptAt = document.NextSyncAttemptAt,
         DriveWebViewLink = document.DriveWebViewLink,
         DriveModifiedAt = document.DriveModifiedAt,
+        DriveCheckedAt = document.DriveCheckedAt,
+        HasServerCopy = !string.IsNullOrWhiteSpace(document.LocalPath),
         IsDownloadable = document.IsDownloadable,
         UnsupportedReason = document.UnsupportedReason,
         ConflictState = document.ConflictState.ToString(),

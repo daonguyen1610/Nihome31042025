@@ -47,6 +47,8 @@ public static class GoogleDriveFailure
 
     private static bool IsConnection(Exception exception) => exception switch
     {
+        // Someone has to restore or recreate the folder; the file itself is fine.
+        ProjectDriveFolderMissingException => true,
         TokenResponseException token => ConnectionTokenErrors.Contains(token.Error?.Error ?? string.Empty),
         // A full Drive does not empty by itself.
         GoogleApiException api => api.HttpStatusCode == HttpStatusCode.Unauthorized ||

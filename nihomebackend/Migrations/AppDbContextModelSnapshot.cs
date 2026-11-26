@@ -4625,6 +4625,9 @@ namespace nihomebackend.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("bit");
 
+                    b.Property<int>("FileCheckIntervalHours")
+                        .HasColumnType("int");
+
                     b.Property<string>("FinanceContractsFolder")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -8456,6 +8459,9 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<DateTime?>("DriveCheckedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("DriveFileId")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -8614,6 +8620,9 @@ namespace nihomebackend.Migrations
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<DateTime?>("LastReconciledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("MissingSince")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("OperationalProjectId")

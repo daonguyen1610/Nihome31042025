@@ -33,6 +33,10 @@ public sealed class ProjectDocumentResponse
     public DateTime? NextSyncAttemptAt { get; set; }
     public string? DriveWebViewLink { get; set; }
     public DateTime? DriveModifiedAt { get; set; }
+    /// <summary>When the background job last confirmed the file on Drive.</summary>
+    public DateTime? DriveCheckedAt { get; set; }
+    /// <summary>The server still holds the original, so it can be downloaded or sent to Drive again.</summary>
+    public bool HasServerCopy { get; set; }
     public bool IsDownloadable { get; set; }
     public string? UnsupportedReason { get; set; }
     public string ConflictState { get; set; } = string.Empty;

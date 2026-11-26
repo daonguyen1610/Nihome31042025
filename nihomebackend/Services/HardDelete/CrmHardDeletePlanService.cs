@@ -722,7 +722,7 @@ public sealed class CrmHardDeletePlanService(
 
         return sidecar.SyncStatus switch
         {
-            ProjectDocumentSyncStatus.Synced =>
+            ProjectDocumentSyncStatus.Synced or ProjectDocumentSyncStatus.Missing or ProjectDocumentSyncStatus.Damaged =>
                 !string.IsNullOrWhiteSpace(instanceId) &&
                 !string.IsNullOrWhiteSpace(sidecar.DriveFileId) &&
                 !string.IsNullOrWhiteSpace(sidecar.DriveFolderId) &&

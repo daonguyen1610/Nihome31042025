@@ -13,10 +13,14 @@ public interface IProjectDriveSyncProcessor
     Task<bool> ProcessNextOutboundAsync(CancellationToken ct = default);
     Task ReconcileProjectAsync(int projectId, CancellationToken ct = default);
     Task ReconcileBoundProjectsAsync(CancellationToken ct = default);
+    /// <summary>Checks the Drive files that are due again; returns how many were checked.</summary>
+    Task<int> VerifyDriveFilesAsync(CancellationToken ct = default);
+    /// <summary>Checks one document now. Returns false when Drive cannot be asked, leaving its status alone.</summary>
+    Task<bool> VerifyDocumentAsync(long documentId, CancellationToken ct = default);
     Task<int> InitializeProjectFoldersAsync(int afterProjectId, CancellationToken ct = default);
 }
 
-public sealed class ProjectDriveSyncProcessor(
+public sealed partial class ProjectDriveSyncProcessor(
     AppDbContext db,
     IProjectDocumentStorageService storage,
     IGoogleDriveAdapter drive,
@@ -203,6 +207,12 @@ public sealed class ProjectDriveSyncProcessor(
         {
             try
             {
+                var remote = await drive.GetMetadataAsync(localReplica.DriveFileId!, ct);
+                if (remote is null || remote.IsTrashed)
+                {
+                    await KeepServerCopyOfLostReplicaAsync(localReplica.Id, remote is null ? "notFound" : "trashed", ct);
+                    return true;
+                }
                 await VerifyRemoteContentAsync(localReplica, localReplica.DriveFileId!, ct);
                 await PurgeLocalReplicaAsync(localReplica, ct);
                 return true;
@@ -312,6 +322,8 @@ public sealed class ProjectDriveSyncProcessor(
         }
         catch (Exception exception) when (!ct.IsCancellationRequested)
         {
+            // Unsaved status changes must not be audited or announced by the next folder's save.
+            driveStateChanges.Clear();
             logger.LogWarning(exception, "Project Drive folder {FolderId} reconciliation failed; remaining folders will continue", folder.Id);
         }
         finally
@@ -347,9 +359,17 @@ public sealed class ProjectDriveSyncProcessor(
             }
             if (!remoteById.TryGetValue(document.DriveFileId!, out var remote))
             {
-                if (!deleteWebRecordsOnDriveDelete) continue;
+                // With the delete-sync setting off the record stays, but it must stop saying "Synced".
+                if (!deleteWebRecordsOnDriveDelete && document.SyncStatus is not
+                    (ProjectDocumentSyncStatus.Synced or ProjectDocumentSyncStatus.Damaged)) continue;
                 var currentRemote = await drive.GetMetadataAsync(document.DriveFileId!, ct);
                 if (currentRemote is not null && !currentRemote.IsTrashed) continue;
+                if (!deleteWebRecordsOnDriveDelete)
+                {
+                    MarkDriveProblem(document, ProjectDocumentSyncStatus.Missing,
+                        currentRemote is null ? "notFound" : "trashed");
+                    continue;
+                }
                 document.DesiredOperation = ProjectDocumentDesiredOperation.None;
                 document.SyncStatus = ProjectDocumentSyncStatus.Deleted;
                 document.DriveFileId = null;
@@ -363,6 +383,15 @@ public sealed class ProjectDriveSyncProcessor(
 
             if (IsDrivePrimary(document))
             {
+                // An emptied file is not an edit to accept: keep what was recorded and flag it.
+                if (IsEmptiedOnDrive(document, remote))
+                {
+                    if (document.SyncStatus is ProjectDocumentSyncStatus.Synced or ProjectDocumentSyncStatus.Missing)
+                        MarkDriveProblem(document, ProjectDocumentSyncStatus.Damaged, "empty");
+                    remoteById.Remove(remote.Id);
+                    continue;
+                }
+                MarkDriveHealthy(document);
                 document.OriginalFileName = remote.Name;
                 document.ContentType = remote.MimeType;
                 document.Size = remote.Size ?? 0;
@@ -379,6 +408,8 @@ public sealed class ProjectDriveSyncProcessor(
 
             if (HasRemoteChanged(document, remote) && document.ConflictState == ProjectDocumentConflictState.None)
                 await ImportConflictAsync(document, remote, ct);
+            else if (!HasRemoteChanged(document, remote) && !IsEmptiedOnDrive(document, remote))
+                MarkDriveHealthy(document);
             remoteById.Remove(remote.Id);
         }
 
@@ -453,6 +484,16 @@ public sealed class ProjectDriveSyncProcessor(
             }
         }
         await db.SaveChangesAsync(ct);
+        await CompleteDriveStateChangesAsync(ct);
+    }
+
+    private async Task KeepServerCopyOfLostReplicaAsync(long documentId, string reason, CancellationToken ct)
+    {
+        var document = await db.ProjectDocuments.SingleAsync(item => item.Id == documentId, ct);
+        await db.Entry(document).ReloadAsync(ct);
+        if (document.SyncStatus != ProjectDocumentSyncStatus.Synced) return;
+        MarkDriveProblem(document, ProjectDocumentSyncStatus.Missing, reason);
+        if (await TrySaveCheckAsync(document, ct)) await CompleteDriveStateChangesAsync(ct);
     }
 
     private async Task RemoveDuplicateManagedReplicasAsync(
@@ -716,6 +757,8 @@ public sealed class ProjectDriveSyncProcessor(
                 TimeSpan.FromMinutes(5)),
             _ => ("Không thể đồng bộ Google Drive. Vui lòng kiểm tra kết nối hoặc thử lại sau.", Backoff(attempt)),
         };
+        var folderMissing = exception is ProjectDriveFolderMissingException;
+        if (folderMissing) safeError = DriveProblemKey + "folderMissing";
         DateTime? nextAttemptAt = terminal ? null : now.Add(retryDelay);
         await using var failureTransaction = db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(ct)
@@ -734,7 +777,8 @@ public sealed class ProjectDriveSyncProcessor(
             await PropagateSurveyFailureAsync(documentId, countedAttempts, terminal, safeError, now, ct);
             if (failureTransaction is not null) await failureTransaction.CommitAsync(ct);
             if (terminal) await NotifyAdminsOfFailedSyncAsync(document, safeError);
-            if (kind == GoogleDriveFailureKind.Connection) await NotifyAdminsOfStoppedSyncAsync(ct);
+            if (folderMissing) await NotifyAdminsOfMissingFolderAsync(document, ct);
+            else if (kind == GoogleDriveFailureKind.Connection) await NotifyAdminsOfStoppedSyncAsync(ct);
         }
         logger.LogWarning(exception, "Project document {DocumentId} Drive sync attempt {Attempt} failed", documentId, attempt);
         audit.Log(new AuditEvent
@@ -1124,6 +1168,7 @@ public sealed class ProjectDriveSyncService(
                 var renamed = await processor.ProcessNextProjectRenameAsync(stoppingToken);
                 var processed = await processor.ProcessNextOutboundAsync(stoppingToken);
                 await processor.ReconcileBoundProjectsAsync(stoppingToken);
+                await processor.VerifyDriveFilesAsync(stoppingToken);
                 if (!renamed && !processed) await Task.Delay(delay, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }

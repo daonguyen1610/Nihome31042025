@@ -811,7 +811,7 @@ export default function SurveyMediaPanel({
                   ) : null}
                   {media.syncError ? (
                     <p className="mt-2 rounded bg-destructive/10 p-2 text-xs text-destructive">
-                      {media.syncError}
+                      {t(media.syncError)}
                     </p>
                   ) : null}
                   <div className="mt-3 flex flex-wrap gap-1.5">

@@ -4,7 +4,11 @@ using NihomeBackend.Models.DTOs.Responses;
 namespace NihomeBackend.Services;
 
 public sealed class ProjectDocumentValidationException(string message) : Exception(message);
-public sealed class ProjectDocumentConflictException(string message) : Exception(message);
+public class ProjectDocumentConflictException(string message) : Exception(message);
+/// <summary>The file is no longer on Google Drive and the server holds no copy of it.</summary>
+public sealed class ProjectDocumentFileMissingException() : ProjectDocumentConflictException(
+    "Tệp không còn trên Google Drive và máy chủ không còn bản sao. Hãy khôi phục tệp từ thùng rác Drive " +
+    "rồi bấm Kiểm tra lại, hoặc tải tệp lên lại.");
 public sealed record ProjectDocumentDownload(
     string OriginalFileName,
     string ContentType,

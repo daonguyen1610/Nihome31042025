@@ -990,6 +990,10 @@ export const operationalProjectsApi = {
     }),
   deleteProjectDocument: (projectId: number, documentId: number) =>
     api.delete(`/operational-projects/${projectId}/documents/${documentId}`),
+  verifyProjectDocument: (projectId: number, documentId: number) =>
+    api.post<ProjectDocumentResponse>(
+      `/operational-projects/${projectId}/documents/${documentId}/verify`,
+    ),
   retryProjectDocument: (projectId: number, documentId: number) =>
     api.post<ProjectDocumentResponse>(
       `/operational-projects/${projectId}/documents/${documentId}/retry`,

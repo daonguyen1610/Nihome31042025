@@ -289,6 +289,30 @@ public sealed class GoogleDriveOAuthServiceTests
         Assert.Empty(db.GoogleDriveCredentials);
     }
 
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(168, true)]
+    [InlineData(0, false)]
+    [InlineData(169, false)]
+    public async Task SettingsStore_FileCheckInterval_IsStoredOnlyWithinItsRange(int hours, bool accepted)
+    {
+        await using var db = CreateDb();
+        var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
+        var request = ValidConfiguration("client-secret-value");
+        request.FileCheckIntervalHours = hours;
+
+        if (!accepted)
+        {
+            await Assert.ThrowsAsync<GoogleDriveSettingsValidationException>(() => store.UpdateAsync(request, 7));
+            Assert.Empty(db.GoogleDriveCredentials);
+            return;
+        }
+        await store.UpdateAsync(request, 7);
+
+        Assert.Equal(hours, (await store.GetRuntimeAsync()).FileCheckIntervalHours);
+        Assert.Equal(hours, (await store.GetAdminAsync()).FileCheckIntervalHours);
+    }
+
     [Fact]
     public async Task SettingsStore_PathAlreadyUsedByAnotherFolder_IsRejected()
     {
@@ -687,7 +711,7 @@ public sealed class GoogleDriveOAuthServiceTests
             .ReturnsAsync(new GoogleDriveAdminConfigurationResponse(
                 true, options.ClientId, true, true, options.OAuthRedirectUri,
                 options.FrontendReturnUrl, options.RootFolderId, options.InstanceId,
-                options.ApplicationName, options.Folders, true, false, true, 15,
+                options.ApplicationName, options.Folders, true, false, true, 15, 6,
                 "owner@example.com", DateTime.UtcNow, "row-version"));
         var drive = new Mock<IGoogleDriveAdapter>();
         drive.Setup(adapter => adapter.CheckConnectionAsync(It.IsAny<CancellationToken>()))
@@ -723,7 +747,7 @@ public sealed class GoogleDriveOAuthServiceTests
             .ReturnsAsync(new GoogleDriveAdminConfigurationResponse(
                 true, options.ClientId, true, true, options.OAuthRedirectUri,
                 options.FrontendReturnUrl, options.RootFolderId, options.InstanceId,
-                options.ApplicationName, options.Folders, true, false, true, 15,
+                options.ApplicationName, options.Folders, true, false, true, 15, 6,
                 "drive-audit@example.com", DateTime.UtcNow, "row-version"));
         settings.Setup(store => store.GetRuntimeAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new GoogleDriveReconnectRequiredException(
@@ -964,7 +988,7 @@ public sealed class GoogleDriveOAuthServiceTests
     private static GoogleDriveAdminConfigurationResponse AdminMetadata(GoogleDriveOptions options, string? email) =>
         new(true, options.ClientId, true, true, options.OAuthRedirectUri,
             options.FrontendReturnUrl, options.RootFolderId, options.InstanceId,
-            options.ApplicationName, options.Folders, true, false, true, 15,
+            options.ApplicationName, options.Folders, true, false, true, 15, 6,
             email, DateTime.UtcNow, "row-version");
 
     public static TheoryData<Exception, string, string> StatusFailures() => new()

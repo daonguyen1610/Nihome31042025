@@ -268,11 +268,16 @@ public sealed class BusinessRootHardDeletePlanServiceTests : IDisposable
         Assert.Equal("delete-contract-aggregate", definitions[^1].ActionIdentifier);
     }
 
-    [Fact]
-    public async Task ForContractAsync_SafeSyncedSidecarAddsDriveDeleteAndUnlinkImpact()
+    // Missing and Damaged rows were "Synced" before the file check existed, so they must not start blocking deletion.
+    [Theory]
+    [InlineData(ProjectDocumentSyncStatus.Synced)]
+    [InlineData(ProjectDocumentSyncStatus.Missing)]
+    [InlineData(ProjectDocumentSyncStatus.Damaged)]
+    public async Task ForContractAsync_SafeUploadedSidecarAddsDriveDeleteAndUnlinkImpact(ProjectDocumentSyncStatus status)
     {
         var (contract, attachment, project) = await CreateContractAttachmentAsync("safe-drive");
         var sidecar = CreateSidecar(project.Id, attachment, "drive-safe");
+        sidecar.SyncStatus = status;
         db.ProjectDocuments.Add(sidecar);
         await db.SaveChangesAsync();
 

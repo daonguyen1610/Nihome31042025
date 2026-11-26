@@ -21,7 +21,8 @@ public sealed record DriveItem(
     bool IsTrashed,
     IReadOnlyList<string>? Parents = null,
     bool? IsOwnedByMe = null,
-    bool? CanDelete = null);
+    bool? CanDelete = null,
+    string? Sha256 = null);
 public sealed record DriveConnection(
     string? AccountEmail,
     string FolderName,
@@ -374,7 +375,7 @@ public sealed class GoogleDriveAdapter(
     private static string EscapeQueryValue(string value) =>
         value.Replace("\\", "\\\\").Replace("'", "\\'");
 
-    private const string ItemFields = "id,name,mimeType,size,version,modifiedTime,webViewLink,appProperties,trashed,parents,ownedByMe,capabilities(canDelete)";
+    private const string ItemFields = "id,name,mimeType,size,version,modifiedTime,webViewLink,appProperties,trashed,parents,ownedByMe,capabilities(canDelete),sha256Checksum";
 
     private static DriveItem ToItem(GoogleFile file) => new(
         file.Id, file.Name ?? string.Empty, file.MimeType ?? "application/octet-stream", file.Size,
@@ -382,7 +383,7 @@ public sealed class GoogleDriveAdapter(
         file.WebViewLink, file.AppProperties is null
             ? new Dictionary<string, string>()
             : new Dictionary<string, string>(file.AppProperties), file.Trashed == true,
-        file.Parents?.ToList() ?? [], file.OwnedByMe, file.Capabilities?.CanDelete);
+        file.Parents?.ToList() ?? [], file.OwnedByMe, file.Capabilities?.CanDelete, file.Sha256Checksum);
 
     private static DriveUpload ToUpload(GoogleFile file) => new(
         file.Id, file.Version?.ToString(System.Globalization.CultureInfo.InvariantCulture),

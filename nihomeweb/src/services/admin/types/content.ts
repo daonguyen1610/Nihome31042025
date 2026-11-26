@@ -514,6 +514,7 @@ export interface GoogleDriveAdminConfigurationResponse {
   deleteDriveFilesOnWebDelete: boolean;
   deleteWebRecordsOnDriveDelete: boolean;
   pollIntervalSeconds: number;
+  fileCheckIntervalHours: number;
   accountEmail: string | null;
   connectedAt: string | null;
   rowVersion?: string;
@@ -533,6 +534,7 @@ export interface UpdateGoogleDriveConfigurationRequest {
   deleteDriveFilesOnWebDelete: boolean;
   deleteWebRecordsOnDriveDelete: boolean;
   pollIntervalSeconds: number;
+  fileCheckIntervalHours: number;
   rowVersion: string;
 }
 
