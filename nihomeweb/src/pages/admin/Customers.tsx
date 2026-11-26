@@ -22,6 +22,7 @@ import {
   Pencil,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { ListPanel, ListTabs, PageHeader, statusTabs } from "@/components/admin/ListLayout";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { MultiFilePicker } from "@/components/ui/multi-file-picker";
@@ -218,6 +219,9 @@ const AdminCustomers = () => {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
+  const tabCount = Object.values(tabCounts).reduce((sum, value) => sum + value, 0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 20;
 
   const [creating, setCreating] = useState(false);
@@ -300,6 +304,7 @@ const AdminCustomers = () => {
       const { data } = await adminApi.listCustomers({ ...listFilters, page, pageSize });
       setRows(data.items);
       setTotal(data.total);
+      setTabCounts(data.statusCounts ?? {});
     } catch (err) {
       setError(uiError(err));
     } finally {
@@ -850,449 +855,471 @@ const AdminCustomers = () => {
   return (
     <AdminLayout>
       <div className="space-y-4">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">{t("customers.title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("customers.subtitle")}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {(canSeeAll ? t("customers.totalCount") : t("customers.myScopeCount")).replace(
-                "{count}",
-                total.toString(),
-              )}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => void fetchList()}>
-              <RefreshCw className="mr-1.5 h-4 w-4" /> {t("common.refresh")}
-            </Button>
-            <AdminExportButton
-              onClick={() => void exportCustomers()}
-              disabled={total === 0 || exporting}
-              label={exporting ? t("common.exporting") : undefined}
-            />
-            {canManage && (
-              <Button onClick={() => setCreating(true)}>
-                <Plus className="mr-1.5 h-4 w-4" /> {t("customers.new")}
+        <PageHeader
+          title={t("customers.title")}
+          count={tabCount}
+          description={
+            canSeeAll
+              ? t("customers.subtitle")
+              : t("customers.myScopeCount").replace("{count}", total.toString())
+          }
+          actions={
+            <>
+              <Button variant="outline" onClick={() => void fetchList()}>
+                <RefreshCw className="mr-1.5 h-4 w-4" /> {t("common.refresh")}
               </Button>
-            )}
-          </div>
-        </header>
+              <AdminExportButton
+                onClick={() => void exportCustomers()}
+                disabled={total === 0 || exporting}
+                label={exporting ? t("common.exporting") : undefined}
+              />
+              {canManage && (
+                <Button onClick={() => setCreating(true)}>
+                  <Plus className="mr-1.5 h-4 w-4" /> {t("customers.new")}
+                </Button>
+              )}
+            </>
+          }
+        />
 
-        <section className="grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
-          <div className="sm:col-span-2 lg:col-span-1">
-            <Label className="text-xs" htmlFor="customer-search">
-              {t("customers.filter.search")}
-            </Label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="customer-search"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder={t("customers.searchPlaceholder")}
-                className="h-9 pl-9"
+        <ListTabs
+          label={t("customers.filter.status")}
+          tabs={statusTabs(t("common.all"), STATUSES, tabCounts, statusFilter, (value) =>
+            t(`customers.status.${value}`),
+          )}
+          value={statusFilter}
+          onChange={(next) => {
+            setStatusFilter(next);
+            setPage(1);
+          }}
+        />
+        <ListPanel
+          search={
+            <>
+              <div className="sm:col-span-2 lg:col-span-1">
+                <Label className="sr-only" htmlFor="customer-search">
+                  {t("customers.filter.search")}
+                </Label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="customer-search"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder={t("customers.searchPlaceholder")}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+            </>
+          }
+          filterCount={
+            [typeFilter !== "", sourceFilter !== "", sectorFilter !== ""].filter(Boolean).length
+          }
+          filtersOpen={filtersOpen}
+          onFiltersOpenChange={setFiltersOpen}
+          onClear={
+            searchInput !== "" ||
+            statusFilter !== "" ||
+            [typeFilter !== "", sourceFilter !== "", sectorFilter !== ""].some(Boolean)
+              ? () => {
+                  setSearchInput("");
+                  setSearch("");
+                  setStatusFilter("");
+                  setTypeFilter("");
+                  setSourceFilter("");
+                  setSectorFilter("");
+                  setPage(1);
+                }
+              : undefined
+          }
+          filters={
+            <>
+              <FieldScope>
+                <Label className="text-xs">{t("customers.filter.type")}</Label>
+                <Select
+                  value={typeFilter || "__all"}
+                  onValueChange={(v) => {
+                    setPage(1);
+                    setTypeFilter(v === "__all" ? "" : (v as CustomerType));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all">{t("customers.filter.all")}</SelectItem>
+                    {TYPES.map((tp) => (
+                      <SelectItem key={tp} value={tp}>
+                        {t(`customers.type.${tp}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FieldScope>
+              <FieldScope>
+                <Label className="text-xs">{t("customers.filter.source")}</Label>
+                <Select
+                  value={sourceFilter || "__all"}
+                  onValueChange={(v) => {
+                    setPage(1);
+                    setSourceFilter(v === "__all" ? "" : v);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all">{t("customers.filter.all")}</SelectItem>
+                    {sources.map((s) => (
+                      <SelectItem key={s.code} value={s.code}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FieldScope>
+              <FieldScope className="sm:col-span-2 lg:col-span-1">
+                <Label className="text-xs">{t("customers.filter.businessSector")}</Label>
+                <SearchableSelect
+                  value={sectorFilter || "__all"}
+                  onChange={(v) => {
+                    setPage(1);
+                    setSectorFilter(v === "__all" ? "" : v);
+                  }}
+                  ariaLabel={t("customers.filter.businessSector")}
+                  searchPlaceholder={t("customers.businessSector.search")}
+
+                  options={[
+                    { value: "__all", label: t("customers.filter.all") },
+                    // Only sectors still in use are offered as filters.
+                    ...sectors
+                      .filter((s) => s.isActive || s.code === sectorFilter)
+                      .map((s) => ({ value: s.code, label: s.name })),
+                  ]}
+                />
+              </FieldScope>
+            </>
+          }
+        >
+          {loading ? (
+            <div className="p-3">
+              <ListSkeleton />
+            </div>
+          ) : error ? (
+            <PageError message={error} onRetry={() => void fetchList()} />
+          ) : rows.length === 0 && Object.keys(listFilters).length > 0 ? (
+            <div className="p-3">
+              <PageNoMatches
+                onClear={() => {
+                  setSearchInput("");
+                  setSearch("");
+                  setTypeFilter("");
+                  setStatusFilter("");
+                  setSourceFilter("");
+                  setSectorFilter("");
+                  setPage(1);
+                }}
               />
             </div>
-          </div>
-          <FieldScope>
-            <Label className="text-xs">{t("customers.filter.type")}</Label>
-            <Select
-              value={typeFilter || "__all"}
-              onValueChange={(v) => {
-                setPage(1);
-                setTypeFilter(v === "__all" ? "" : (v as CustomerType));
-              }}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all">{t("customers.filter.all")}</SelectItem>
-                {TYPES.map((tp) => (
-                  <SelectItem key={tp} value={tp}>
-                    {t(`customers.type.${tp}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldScope>
-          <FieldScope>
-            <Label className="text-xs">{t("customers.filter.status")}</Label>
-            <Select
-              value={statusFilter || "__all"}
-              onValueChange={(v) => {
-                setPage(1);
-                setStatusFilter(v === "__all" ? "" : (v as CustomerRelationshipStatus));
-              }}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all">{t("customers.filter.all")}</SelectItem>
-                {STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {t(`customers.status.${s}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldScope>
-          <FieldScope>
-            <Label className="text-xs">{t("customers.filter.source")}</Label>
-            <Select
-              value={sourceFilter || "__all"}
-              onValueChange={(v) => {
-                setPage(1);
-                setSourceFilter(v === "__all" ? "" : v);
-              }}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all">{t("customers.filter.all")}</SelectItem>
-                {sources.map((s) => (
-                  <SelectItem key={s.code} value={s.code}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldScope>
-          <FieldScope className="sm:col-span-2 lg:col-span-1">
-            <Label className="text-xs">{t("customers.filter.businessSector")}</Label>
-            <SearchableSelect
-              value={sectorFilter || "__all"}
-              onChange={(v) => {
-                setPage(1);
-                setSectorFilter(v === "__all" ? "" : v);
-              }}
-              ariaLabel={t("customers.filter.businessSector")}
-              searchPlaceholder={t("customers.businessSector.search")}
-              className="h-9"
-              options={[
-                { value: "__all", label: t("customers.filter.all") },
-                // Only sectors still in use are offered as filters.
-                ...sectors
-                  .filter((s) => s.isActive || s.code === sectorFilter)
-                  .map((s) => ({ value: s.code, label: s.name })),
-              ]}
-            />
-          </FieldScope>
-        </section>
-
-        {loading ? (
-          <ListSkeleton />
-        ) : error ? (
-          <PageError message={error} onRetry={() => void fetchList()} />
-        ) : rows.length === 0 && Object.keys(listFilters).length > 0 ? (
-          <PageNoMatches
-            onClear={() => {
-              setSearchInput("");
-              setSearch("");
-              setTypeFilter("");
-              setStatusFilter("");
-              setSourceFilter("");
-              setSectorFilter("");
-              setPage(1);
-            }}
-          />
-        ) : rows.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-            <div className="rounded-full bg-muted p-3">
-              <Search className="h-5 w-5" aria-hidden />
+          ) : rows.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 p-10 text-center text-sm text-muted-foreground">
+              <div className="rounded-full bg-muted p-3">
+                <Search className="h-5 w-5" aria-hidden />
+              </div>
+              <p>{t("customers.empty")}</p>
+              {canManage && (
+                <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
+                  <Plus className="mr-1.5 h-4 w-4" /> {t("customers.new")}
+                </Button>
+              )}
             </div>
-            <p>{t("customers.empty")}</p>
-            {canManage && (
-              <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
-                <Plus className="mr-1.5 h-4 w-4" /> {t("customers.new")}
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {/* Mobile / tablet card view — one <article> per customer. */}
-            <div className="grid gap-2 xl:hidden">
-              {rows.map((c) => {
-                const primary = primaryContact(c);
-                return (
-                  <article
-                    key={c.id}
-                    className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition-colors hover:bg-muted/40"
-                    onClick={() => void openDetail(c.id)}
-                  >
-                    <header className="flex items-start gap-2">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="break-words text-sm font-semibold leading-tight">
-                          {c.name}
-                        </h3>
-                        {c.type === "Company" && c.taxId && (
-                          <p className="mt-0.5 text-xs text-muted-foreground">MST: {c.taxId}</p>
-                        )}
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "shrink-0 whitespace-nowrap font-medium",
-                          CUSTOMER_TYPE_STYLES[c.type],
-                        )}
-                      >
-                        {t(`customers.type.${c.type}`)}
-                      </Badge>
-                    </header>
-
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "gap-1.5 whitespace-nowrap font-medium",
-                          CUSTOMER_STATUS_STYLES[c.relationshipStatus],
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            CUSTOMER_STATUS_DOT[c.relationshipStatus],
-                          )}
-                        />
-                        {t(`customers.status.${c.relationshipStatus}`)}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {sourceLabelByCode.get(c.sourceCode) ?? c.sourceCode}
-                      </span>
-                    </div>
-
-                    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                      <div className="min-w-0">
-                        <dt className="text-muted-foreground">
-                          {t("customers.field.primaryContact")}
-                        </dt>
-                        <dd className="mt-0.5 min-w-0">
-                          {primary ? (
-                            <>
-                              <div className="truncate font-medium">{primary.fullName}</div>
-                              <div className="truncate text-muted-foreground">
-                                {primary.phone || primary.email || "—"}
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </dd>
-                      </div>
-                      {canSeeAll && (
-                        <div className="min-w-0">
-                          <dt className="text-muted-foreground">{t("customers.field.owner")}</dt>
-                          <dd className="mt-0.5 truncate font-medium">{c.ownerName || "—"}</dd>
-                        </div>
-                      )}
-                      <div className={cn("min-w-0", !canSeeAll && "col-start-2")}>
-                        <dt className="text-muted-foreground">{t("customers.field.createdAt")}</dt>
-                        <dd className="mt-0.5 font-medium">{formatDate(c.createdAt)}</dd>
-                      </div>
-                    </dl>
-
-                    {canManage && (
-                      <footer
-                        className="mt-3 flex items-center justify-end gap-1 border-t pt-2"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => void openDetail(c.id, { startEditing: true })}
-                          title={t("common.edit")}
-                          aria-label={t("common.edit")}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => void handleDelete(c.id)}
-                          title={t("common.delete")}
-                          aria-label={t("common.delete")}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </footer>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-
-            {/* Desktop table view (lg+). */}
-            <div className="hidden overflow-x-auto rounded-lg border xl:block">
-              <table className="w-full divide-y text-sm">
-                <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("customers.field.type")}
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("customers.field.name")}
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("customers.field.primaryContact")}
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("customers.field.source")}
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("customers.field.status")}
-                    </th>
-                    {canSeeAll && (
-                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                        {t("customers.field.owner")}
-                      </th>
-                    )}
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("customers.field.createdAt")}
-                    </th>
-                    {canManage && <th className="px-3 py-3" />}
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {rows.map((c) => {
-                    const primary = primaryContact(c);
-                    return (
-                      <tr
-                        key={c.id}
-                        className="cursor-pointer hover:bg-muted/40"
-                        {...rowAction(() => void openDetail(c.id))}
-                      >
-                        <td className="px-3 py-3">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "whitespace-nowrap font-medium",
-                              CUSTOMER_TYPE_STYLES[c.type],
-                            )}
-                          >
-                            {t(`customers.type.${c.type}`)}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-3 font-medium">
-                          {c.name}
+          ) : (
+            <div className="space-y-2">
+              {/* Mobile / tablet card view — one <article> per customer. */}
+              <div className="grid gap-2 p-3 xl:hidden">
+                {rows.map((c) => {
+                  const primary = primaryContact(c);
+                  return (
+                    <article
+                      key={c.id}
+                      className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition-colors hover:bg-muted/40"
+                      onClick={() => void openDetail(c.id)}
+                    >
+                      <header className="flex items-start gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="break-words text-sm font-semibold leading-tight">
+                            {c.name}
+                          </h3>
                           {c.type === "Company" && c.taxId && (
-                            <div className="text-xs text-muted-foreground">MST: {c.taxId}</div>
+                            <p className="mt-0.5 text-xs text-muted-foreground">MST: {c.taxId}</p>
                           )}
-                        </td>
-                        <td className="px-3 py-3 text-xs">
-                          {primary ? (
-                            <>
-                              {primary.phone && <div>{primary.phone}</div>}
-                              {primary.email && (
-                                <div className="text-muted-foreground">{primary.email}</div>
-                              )}
-                              {!primary.phone && !primary.email && "—"}
-                            </>
-                          ) : (
-                            "—"
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "shrink-0 whitespace-nowrap font-medium",
+                            CUSTOMER_TYPE_STYLES[c.type],
                           )}
-                        </td>
-                        <td className="px-3 py-3 text-xs">
-                          {sourceLabelByCode.get(c.sourceCode) ?? c.sourceCode}
-                        </td>
-                        <td className="px-3 py-3">
-                          <Badge
-                            variant="outline"
+                        >
+                          {t(`customers.type.${c.type}`)}
+                        </Badge>
+                      </header>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "gap-1.5 whitespace-nowrap font-medium",
+                            CUSTOMER_STATUS_STYLES[c.relationshipStatus],
+                          )}
+                        >
+                          <span
                             className={cn(
-                              "gap-1.5 whitespace-nowrap font-medium",
-                              CUSTOMER_STATUS_STYLES[c.relationshipStatus],
+                              "h-1.5 w-1.5 rounded-full",
+                              CUSTOMER_STATUS_DOT[c.relationshipStatus],
                             )}
-                          >
-                            <span
-                              className={cn(
-                                "h-1.5 w-1.5 rounded-full",
-                                CUSTOMER_STATUS_DOT[c.relationshipStatus],
-                              )}
-                            />
-                            {t(`customers.status.${c.relationshipStatus}`)}
-                          </Badge>
-                        </td>
+                          />
+                          {t(`customers.status.${c.relationshipStatus}`)}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {sourceLabelByCode.get(c.sourceCode) ?? c.sourceCode}
+                        </span>
+                      </div>
+
+                      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                        <div className="min-w-0">
+                          <dt className="text-muted-foreground">
+                            {t("customers.field.primaryContact")}
+                          </dt>
+                          <dd className="mt-0.5 min-w-0">
+                            {primary ? (
+                              <>
+                                <div className="truncate font-medium">{primary.fullName}</div>
+                                <div className="truncate text-muted-foreground">
+                                  {primary.phone || primary.email || "—"}
+                                </div>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </dd>
+                        </div>
                         {canSeeAll && (
-                          <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
-                            {c.ownerName || "—"}
-                          </td>
-                        )}
-                        <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
-                          <div>{formatDate(c.createdAt)}</div>
-                          <div className="text-xs opacity-70">
-                            {formatTime(c.createdAt, lang, {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                          <div className="min-w-0">
+                            <dt className="text-muted-foreground">{t("customers.field.owner")}</dt>
+                            <dd className="mt-0.5 truncate font-medium">{c.ownerName || "—"}</dd>
                           </div>
-                        </td>
-                        {canManage && (
-                          <td className="px-3 py-3 text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  void openDetail(c.id, { startEditing: true });
-                                }}
-                                title={t("common.edit")}
-                                aria-label={t("common.edit")}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  void handleDelete(c.id);
-                                }}
-                                title={t("common.delete")}
-                                aria-label={t("common.delete")}
-                                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                        )}
+                        <div className={cn("min-w-0", !canSeeAll && "col-start-2")}>
+                          <dt className="text-muted-foreground">
+                            {t("customers.field.createdAt")}
+                          </dt>
+                          <dd className="mt-0.5 font-medium">{formatDate(c.createdAt)}</dd>
+                        </div>
+                      </dl>
+
+                      {canManage && (
+                        <footer
+                          className="mt-3 flex items-center justify-end gap-1 border-t pt-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => void openDetail(c.id, { startEditing: true })}
+                            title={t("common.edit")}
+                            aria-label={t("common.edit")}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => void handleDelete(c.id)}
+                            title={t("common.delete")}
+                            aria-label={t("common.delete")}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </footer>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table view (lg+). */}
+              <div className="hidden overflow-x-auto xl:block">
+                <table className="w-full divide-y text-sm">
+                  <thead className="bg-muted/50 text-xs text-muted-foreground">
+                    <tr>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("customers.field.type")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("customers.field.name")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("customers.field.primaryContact")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("customers.field.source")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("customers.field.status")}
+                      </th>
+                      {canSeeAll && (
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("customers.field.owner")}
+                        </th>
+                      )}
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("customers.field.createdAt")}
+                      </th>
+                      {canManage && <th className="px-3 py-3" />}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {rows.map((c) => {
+                      const primary = primaryContact(c);
+                      return (
+                        <tr
+                          key={c.id}
+                          className="cursor-pointer hover:bg-muted/40"
+                          {...rowAction(() => void openDetail(c.id))}
+                        >
+                          <td className="px-3 py-3">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "whitespace-nowrap font-medium",
+                                CUSTOMER_TYPE_STYLES[c.type],
+                              )}
+                            >
+                              {t(`customers.type.${c.type}`)}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-3 font-medium">
+                            {c.name}
+                            {c.type === "Company" && c.taxId && (
+                              <div className="text-xs text-muted-foreground">MST: {c.taxId}</div>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-xs">
+                            {primary ? (
+                              <>
+                                {primary.phone && <div>{primary.phone}</div>}
+                                {primary.email && (
+                                  <div className="text-muted-foreground">{primary.email}</div>
+                                )}
+                                {!primary.phone && !primary.email && "—"}
+                              </>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-xs">
+                            {sourceLabelByCode.get(c.sourceCode) ?? c.sourceCode}
+                          </td>
+                          <td className="px-3 py-3">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "gap-1.5 whitespace-nowrap font-medium",
+                                CUSTOMER_STATUS_STYLES[c.relationshipStatus],
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "h-1.5 w-1.5 rounded-full",
+                                  CUSTOMER_STATUS_DOT[c.relationshipStatus],
+                                )}
+                              />
+                              {t(`customers.status.${c.relationshipStatus}`)}
+                            </Badge>
+                          </td>
+                          {canSeeAll && (
+                            <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                              {c.ownerName || "—"}
+                            </td>
+                          )}
+                          <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                            <div>{formatDate(c.createdAt)}</div>
+                            <div className="text-xs opacity-70">
+                              {formatTime(c.createdAt, lang, {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </div>
                           </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          {canManage && (
+                            <td className="px-3 py-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void openDetail(c.id, { startEditing: true });
+                                  }}
+                                  title={t("common.edit")}
+                                  aria-label={t("common.edit")}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void handleDelete(c.id);
+                                  }}
+                                  title={t("common.delete")}
+                                  aria-label={t("common.delete")}
+                                  className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {total > pageSize && (
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} / {total}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                ‹
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page * pageSize >= total}
-              >
-                ›
-              </Button>
+          {total > pageSize && (
+            <div className="flex items-center justify-between border-t p-3 text-sm text-muted-foreground">
+              <span>
+                {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} / {total}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  ‹
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page * pageSize >= total}
+                >
+                  ›
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </ListPanel>
       </div>
 
       {/* Create dialog */}

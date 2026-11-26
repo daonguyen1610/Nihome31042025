@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Plus, Search, Trash2, ArrowRight, RefreshCw, Pencil, Save } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { ListPanel, ListTabs, PageHeader, statusTabs } from "@/components/admin/ListLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { useListExport } from "@/hooks/useListExport";
@@ -138,6 +139,9 @@ const AdminLeads = () => {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
+  const tabCount = Object.values(tabCounts).reduce((sum, value) => sum + value, 0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 20;
 
   // Debounce search input by 350ms so the list doesn't refetch on every keystroke.
@@ -196,6 +200,7 @@ const AdminLeads = () => {
       const { data } = await adminApi.listLeads({ ...listFilters, page, pageSize });
       setLeads(data.items);
       setTotal(data.total);
+      setTabCounts(data.statusCounts ?? {});
     } catch (err) {
       setError(uiError(err));
     } finally {
@@ -551,31 +556,30 @@ const AdminLeads = () => {
   return (
     <AdminLayout>
       <div className="space-y-4">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">{t("leads.title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("leads.subtitle")}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {(canSeeAll ? t("leads.totalCount") : t("leads.myScopeCount")).replace(
-                "{count}",
-                total.toString(),
-              )}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => void fetchList()}>
-              <RefreshCw className="mr-1.5 h-4 w-4" /> {t("common.refresh")}
-            </Button>
-            <AdminExportButton
-              onClick={() => void exportLeads()}
-              disabled={total === 0 || exporting}
-              label={exporting ? t("common.exporting") : undefined}
-            />
-            <Button onClick={() => setCreating(true)}>
-              <Plus className="mr-1.5 h-4 w-4" /> {t("leads.new")}
-            </Button>
-          </div>
-        </header>
+        <PageHeader
+          title={t("leads.title")}
+          count={tabCount}
+          description={
+            canSeeAll
+              ? t("leads.subtitle")
+              : t("leads.myScopeCount").replace("{count}", total.toString())
+          }
+          actions={
+            <>
+              <Button variant="outline" onClick={() => void fetchList()}>
+                <RefreshCw className="mr-1.5 h-4 w-4" /> {t("common.refresh")}
+              </Button>
+              <AdminExportButton
+                onClick={() => void exportLeads()}
+                disabled={total === 0 || exporting}
+                label={exporting ? t("common.exporting") : undefined}
+              />
+              <Button onClick={() => setCreating(true)}>
+                <Plus className="mr-1.5 h-4 w-4" /> {t("leads.new")}
+              </Button>
+            </>
+          }
+        />
 
         {lookupFailed && (
           <InlineWarning
@@ -584,351 +588,371 @@ const AdminLeads = () => {
           />
         )}
 
-        <section className="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
-          <div>
-            <Label className="text-xs" htmlFor="lead-search">
-              {t("leads.filter.search")}
-            </Label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="lead-search"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder={t("leads.searchPlaceholder")}
-                className="h-9 pl-9"
+        <ListTabs
+          label={t("leads.filter.status")}
+          tabs={statusTabs(t("common.all"), STATUSES, tabCounts, statusFilter, (value) =>
+            t(`leads.status.${value}`),
+          )}
+          value={statusFilter}
+          onChange={(next) => {
+            setStatusFilter(next);
+            setPage(1);
+          }}
+        />
+        <ListPanel
+          search={
+            <>
+              <div>
+                <Label className="sr-only" htmlFor="lead-search">
+                  {t("leads.filter.search")}
+                </Label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="lead-search"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder={t("leads.searchPlaceholder")}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+            </>
+          }
+          filterCount={[sourceFilter !== "", segmentFilter !== ""].filter(Boolean).length}
+          filtersOpen={filtersOpen}
+          onFiltersOpenChange={setFiltersOpen}
+          onClear={
+            searchInput !== "" ||
+            statusFilter !== "" ||
+            [sourceFilter !== "", segmentFilter !== ""].some(Boolean)
+              ? () => {
+                  setSearchInput("");
+                  setSearch("");
+                  setStatusFilter("");
+                  setSourceFilter("");
+                  setSegmentFilter("");
+                  setPage(1);
+                }
+              : undefined
+          }
+          filters={
+            <>
+              <FieldScope>
+                <Label className="text-xs">{t("leads.filter.source")}</Label>
+                <Select
+                  value={sourceFilter || "__all"}
+                  onValueChange={(v) => {
+                    setPage(1);
+                    setSourceFilter(v === "__all" ? "" : v);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all">{t("leads.filter.all")}</SelectItem>
+                    {sources.map((s) => (
+                      <SelectItem key={s.code} value={s.code}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FieldScope>
+              <FieldScope>
+                <Label className="text-xs">{t("leads.filter.segment")}</Label>
+                <Select
+                  value={segmentFilter || "__all"}
+                  onValueChange={(value) => {
+                    setPage(1);
+                    setSegmentFilter(value === "__all" ? "" : value);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all">{t("leads.filter.all")}</SelectItem>
+                    {segments.map((segment) => (
+                      <SelectItem key={segment.code} value={segment.code}>
+                        {segment.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FieldScope>
+            </>
+          }
+        >
+          {loading ? (
+            <div className="p-3">
+              <ListSkeleton />
+            </div>
+          ) : error ? (
+            <PageError message={error} onRetry={() => void fetchList()} />
+          ) : leads.length === 0 && Object.keys(listFilters).length > 0 ? (
+            <div className="p-3">
+              <PageNoMatches
+                onClear={() => {
+                  setSearchInput("");
+                  setSearch("");
+                  setStatusFilter("");
+                  setSourceFilter("");
+                  setSegmentFilter("");
+                  setPage(1);
+                }}
               />
             </div>
-          </div>
-
-          <FieldScope>
-            <Label className="text-xs">{t("leads.filter.status")}</Label>
-            <Select
-              value={statusFilter || "__all"}
-              onValueChange={(v) => {
-                setPage(1);
-                setStatusFilter(v === "__all" ? "" : (v as LeadStatus));
-              }}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all">{t("leads.filter.all")}</SelectItem>
-                {STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {t(`leads.status.${s}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldScope>
-
-          <FieldScope>
-            <Label className="text-xs">{t("leads.filter.source")}</Label>
-            <Select
-              value={sourceFilter || "__all"}
-              onValueChange={(v) => {
-                setPage(1);
-                setSourceFilter(v === "__all" ? "" : v);
-              }}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all">{t("leads.filter.all")}</SelectItem>
-                {sources.map((s) => (
-                  <SelectItem key={s.code} value={s.code}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldScope>
-
-          <FieldScope>
-            <Label className="text-xs">{t("leads.filter.segment")}</Label>
-            <Select
-              value={segmentFilter || "__all"}
-              onValueChange={(value) => {
-                setPage(1);
-                setSegmentFilter(value === "__all" ? "" : value);
-              }}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all">{t("leads.filter.all")}</SelectItem>
-                {segments.map((segment) => (
-                  <SelectItem key={segment.code} value={segment.code}>
-                    {segment.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldScope>
-        </section>
-
-        {loading ? (
-          <ListSkeleton />
-        ) : error ? (
-          <PageError message={error} onRetry={() => void fetchList()} />
-        ) : leads.length === 0 && Object.keys(listFilters).length > 0 ? (
-          <PageNoMatches
-            onClear={() => {
-              setSearchInput("");
-              setSearch("");
-              setStatusFilter("");
-              setSourceFilter("");
-              setSegmentFilter("");
-              setPage(1);
-            }}
-          />
-        ) : leads.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-            <div className="rounded-full bg-muted p-3">
-              <Search className="h-5 w-5" aria-hidden />
+          ) : leads.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 p-10 text-center text-sm text-muted-foreground">
+              <div className="rounded-full bg-muted p-3">
+                <Search className="h-5 w-5" aria-hidden />
+              </div>
+              <p>{t("leads.empty")}</p>
+              {canManage && (
+                <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
+                  <Plus className="mr-1.5 h-4 w-4" /> {t("leads.new")}
+                </Button>
+              )}
             </div>
-            <p>{t("leads.empty")}</p>
-            {canManage && (
-              <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
-                <Plus className="mr-1.5 h-4 w-4" /> {t("leads.new")}
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {/* Mobile / tablet card view (<lg) */}
-            <div className="grid gap-3 xl:hidden">
-              {leads.map((lead) => (
-                <article
-                  key={lead.id}
-                  className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition-colors hover:bg-muted/40"
-                  onClick={() => void openDetail(lead.id)}
-                >
-                  <header className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="break-words text-sm font-semibold leading-tight">
-                        {lead.name}
-                      </h3>
-                      {lead.companyName && (
-                        <p className="mt-0.5 text-xs text-muted-foreground break-words">
-                          {lead.companyName}
-                        </p>
-                      )}
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "shrink-0 gap-1.5 whitespace-nowrap font-medium",
-                        LEAD_STATUS_STYLES[lead.status],
-                      )}
-                    >
-                      <span
-                        className={cn("h-1.5 w-1.5 rounded-full", LEAD_STATUS_DOT[lead.status])}
-                      />
-                      {t(`leads.status.${lead.status}`)}
-                    </Badge>
-                    {lead.responseOverdue && (
-                      <Badge variant="destructive" className="shrink-0 whitespace-nowrap">
-                        {t("leads.responseOverdue")}
+          ) : (
+            <div className="space-y-2">
+              {/* Mobile / tablet card view (<lg) */}
+              <div className="grid gap-3 p-3 xl:hidden">
+                {leads.map((lead) => (
+                  <article
+                    key={lead.id}
+                    className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition-colors hover:bg-muted/40"
+                    onClick={() => void openDetail(lead.id)}
+                  >
+                    <header className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="break-words text-sm font-semibold leading-tight">
+                          {lead.name}
+                        </h3>
+                        {lead.companyName && (
+                          <p className="mt-0.5 text-xs text-muted-foreground break-words">
+                            {lead.companyName}
+                          </p>
+                        )}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "shrink-0 gap-1.5 whitespace-nowrap font-medium",
+                          LEAD_STATUS_STYLES[lead.status],
+                        )}
+                      >
+                        <span
+                          className={cn("h-1.5 w-1.5 rounded-full", LEAD_STATUS_DOT[lead.status])}
+                        />
+                        {t(`leads.status.${lead.status}`)}
                       </Badge>
-                    )}
-                  </header>
+                      {lead.responseOverdue && (
+                        <Badge variant="destructive" className="shrink-0 whitespace-nowrap">
+                          {t("leads.responseOverdue")}
+                        </Badge>
+                      )}
+                    </header>
 
-                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                    {(lead.phone || lead.email) && (
-                      <div className="col-span-2">
-                        <dt className="text-muted-foreground">
-                          {t("leads.field.phone")} / {t("leads.field.email")}
-                        </dt>
-                        <dd className="mt-0.5">
-                          {lead.phone && <div className="font-medium">{lead.phone}</div>}
-                          {lead.email && (
-                            <div className="text-muted-foreground break-all">{lead.email}</div>
-                          )}
+                    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                      {(lead.phone || lead.email) && (
+                        <div className="col-span-2">
+                          <dt className="text-muted-foreground">
+                            {t("leads.field.phone")} / {t("leads.field.email")}
+                          </dt>
+                          <dd className="mt-0.5">
+                            {lead.phone && <div className="font-medium">{lead.phone}</div>}
+                            {lead.email && (
+                              <div className="text-muted-foreground break-all">{lead.email}</div>
+                            )}
+                          </dd>
+                        </div>
+                      )}
+                      <div>
+                        <dt className="text-muted-foreground">{t("leads.field.source")}</dt>
+                        <dd className="font-medium">
+                          {sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode}
                         </dd>
                       </div>
-                    )}
-                    <div>
-                      <dt className="text-muted-foreground">{t("leads.field.source")}</dt>
-                      <dd className="font-medium">
-                        {sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("leads.field.segment")}</dt>
-                      <dd className="font-medium">
-                        {segmentLabelByCode.get(lead.segmentCode) ?? lead.segmentCode}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("leads.field.createdAt")}</dt>
-                      <dd className="font-medium">{formatDate(lead.createdAt)}</dd>
-                    </div>
-                    {canSeeAll && lead.ownerName && (
-                      <div className="col-span-2">
-                        <dt className="text-muted-foreground">{t("leads.field.owner")}</dt>
-                        <dd className="font-medium">{lead.ownerName}</dd>
+                      <div>
+                        <dt className="text-muted-foreground">{t("leads.field.segment")}</dt>
+                        <dd className="font-medium">
+                          {segmentLabelByCode.get(lead.segmentCode) ?? lead.segmentCode}
+                        </dd>
                       </div>
-                    )}
-                  </dl>
-
-                  <footer className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleDelete(lead.id);
-                      }}
-                      title={t("common.delete")}
-                      aria-label={t("common.delete")}
-                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </footer>
-                </article>
-              ))}
-            </div>
-
-            {/* Desktop table (lg+) */}
-            <div className="hidden overflow-x-auto rounded-lg border xl:block">
-              <table className="w-full divide-y text-sm">
-                <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("leads.field.name")}
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("leads.field.company")}
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("leads.field.phone")} / {t("leads.field.email")}
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("leads.field.source")}
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("leads.field.segment")}
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("leads.field.status")}
-                    </th>
-                    {canSeeAll && (
-                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                        {t("leads.field.owner")}
-                      </th>
-                    )}
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("leads.field.createdAt")}
-                    </th>
-                    <th className="px-3 py-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {leads.map((lead) => (
-                    <tr
-                      key={lead.id}
-                      className="cursor-pointer hover:bg-muted/40"
-                      {...rowAction(() => void openDetail(lead.id))}
-                    >
-                      <td className="px-3 py-3 font-medium">{lead.name}</td>
-                      <td className="px-3 py-3 text-muted-foreground">{lead.companyName || "—"}</td>
-                      <td className="px-3 py-3 text-xs">
-                        <div>{lead.phone || "—"}</div>
-                        <div className="text-muted-foreground">{lead.email || ""}</div>
-                      </td>
-                      <td className="px-3 py-3 text-xs">
-                        {sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode}
-                      </td>
-                      <td className="px-3 py-3 text-xs">
-                        {segmentLabelByCode.get(lead.segmentCode) ?? lead.segmentCode}
-                      </td>
-                      <td className="px-3 py-3">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "gap-1.5 whitespace-nowrap font-medium",
-                            LEAD_STATUS_STYLES[lead.status],
-                          )}
-                        >
-                          <span
-                            className={cn("h-1.5 w-1.5 rounded-full", LEAD_STATUS_DOT[lead.status])}
-                          />
-                          {t(`leads.status.${lead.status}`)}
-                        </Badge>
-                        {lead.responseOverdue && (
-                          <Badge variant="destructive" className="ml-1 whitespace-nowrap">
-                            {t("leads.responseOverdue")}
-                          </Badge>
-                        )}
-                      </td>
-                      {canSeeAll && (
-                        <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
-                          {lead.ownerName || "—"}
-                        </td>
-                      )}
-                      <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
-                        <div>{formatDate(lead.createdAt)}</div>
-                        <div className="text-xs opacity-70">
-                          {formatTime(lead.createdAt, lang, {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                      <div>
+                        <dt className="text-muted-foreground">{t("leads.field.createdAt")}</dt>
+                        <dd className="font-medium">{formatDate(lead.createdAt)}</dd>
+                      </div>
+                      {canSeeAll && lead.ownerName && (
+                        <div className="col-span-2">
+                          <dt className="text-muted-foreground">{t("leads.field.owner")}</dt>
+                          <dd className="font-medium">{lead.ownerName}</dd>
                         </div>
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void handleDelete(lead.id);
-                          }}
-                          title={t("common.delete")}
-                          aria-label={t("common.delete")}
-                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+                      )}
+                    </dl>
 
-        {total > pageSize && (
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} / {total}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                ‹
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page * pageSize >= total}
-              >
-                ›
-              </Button>
+                    <footer className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleDelete(lead.id);
+                        }}
+                        title={t("common.delete")}
+                        aria-label={t("common.delete")}
+                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </footer>
+                  </article>
+                ))}
+              </div>
+
+              {/* Desktop table (lg+) */}
+              <div className="hidden overflow-x-auto xl:block">
+                <table className="w-full divide-y text-sm">
+                  <thead className="bg-muted/50 text-xs text-muted-foreground">
+                    <tr>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("leads.field.name")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("leads.field.company")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("leads.field.phone")} / {t("leads.field.email")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("leads.field.source")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("leads.field.segment")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("leads.field.status")}
+                      </th>
+                      {canSeeAll && (
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("leads.field.owner")}
+                        </th>
+                      )}
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("leads.field.createdAt")}
+                      </th>
+                      <th className="px-3 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {leads.map((lead) => (
+                      <tr
+                        key={lead.id}
+                        className="cursor-pointer hover:bg-muted/40"
+                        {...rowAction(() => void openDetail(lead.id))}
+                      >
+                        <td className="px-3 py-3 font-medium">{lead.name}</td>
+                        <td className="px-3 py-3 text-muted-foreground">
+                          {lead.companyName || "—"}
+                        </td>
+                        <td className="px-3 py-3 text-xs">
+                          <div>{lead.phone || "—"}</div>
+                          <div className="text-muted-foreground">{lead.email || ""}</div>
+                        </td>
+                        <td className="px-3 py-3 text-xs">
+                          {sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode}
+                        </td>
+                        <td className="px-3 py-3 text-xs">
+                          {segmentLabelByCode.get(lead.segmentCode) ?? lead.segmentCode}
+                        </td>
+                        <td className="px-3 py-3">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-1.5 whitespace-nowrap font-medium",
+                              LEAD_STATUS_STYLES[lead.status],
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "h-1.5 w-1.5 rounded-full",
+                                LEAD_STATUS_DOT[lead.status],
+                              )}
+                            />
+                            {t(`leads.status.${lead.status}`)}
+                          </Badge>
+                          {lead.responseOverdue && (
+                            <Badge variant="destructive" className="ml-1 whitespace-nowrap">
+                              {t("leads.responseOverdue")}
+                            </Badge>
+                          )}
+                        </td>
+                        {canSeeAll && (
+                          <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                            {lead.ownerName || "—"}
+                          </td>
+                        )}
+                        <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                          <div>{formatDate(lead.createdAt)}</div>
+                          <div className="text-xs opacity-70">
+                            {formatTime(lead.createdAt, lang, {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleDelete(lead.id);
+                            }}
+                            title={t("common.delete")}
+                            aria-label={t("common.delete")}
+                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {total > pageSize && (
+            <div className="flex items-center justify-between border-t p-3 text-sm text-muted-foreground">
+              <span>
+                {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} / {total}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  ‹
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page * pageSize >= total}
+                >
+                  ›
+                </Button>
+              </div>
+            </div>
+          )}
+        </ListPanel>
       </div>
 
       {/* Create dialog */}

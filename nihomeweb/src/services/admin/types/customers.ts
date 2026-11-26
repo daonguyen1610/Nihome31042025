@@ -92,6 +92,7 @@ export interface CustomerResponse {
 }
 
 export interface CustomerListResponse {
+  statusCounts?: Record<string, number>;
   total: number;
   page: number;
   pageSize: number;

@@ -37,6 +37,7 @@ test("sales records a customer's business sector and filters the list by it", as
     await expect(create).not.toBeVisible();
 
     // The sector filter keeps the customer; another sector leaves it out.
+    await page.getByRole("button", { name: /^Bộ lọc( ?\d+)?$/ }).click();
     const sector = page.getByRole("combobox", { name: "Lĩnh vực kinh doanh" });
     await sector.click();
     await page.getByRole("option", { name: "Thực phẩm & Đồ uống" }).click();

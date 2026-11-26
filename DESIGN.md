@@ -275,7 +275,8 @@ contract list and the contract detail are the reference implementations.
 **List.** `PageHeader` (title, total, one line of help, actions with one primary)
 → `ListTabs`, quick views with counts, overdue first after "All"; empty views are
 left out → `ListPanel`, one bordered surface holding search, a "Filters" button
-with the number in effect, "Columns" for the table, the records and pagination.
+with the number in effect, "Columns" where a table has optional reference
+columns, the records and pagination.
 Filter fields open inside the panel. Do not stack a separate filter card or
 summary cards above a list.
 

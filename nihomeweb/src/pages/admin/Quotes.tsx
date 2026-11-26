@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { ListPanel, ListTabs, PageHeader, statusTabs } from "@/components/admin/ListLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { useListExport } from "@/hooks/useListExport";
@@ -120,6 +121,9 @@ const AdminQuotes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
+  const tabCount = Object.values(tabCounts).reduce((sum, value) => sum + value, 0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 20;
 
   // filters
@@ -158,6 +162,7 @@ const AdminQuotes = () => {
       const { data } = await adminApi.listQuotes({ ...listFilters, page, pageSize });
       setRows(data.items);
       setTotal(data.total);
+      setTabCounts(data.statusCounts ?? {});
     } catch (err) {
       setError(uiError(err));
     } finally {
@@ -371,168 +376,264 @@ const AdminQuotes = () => {
 
   return (
     <AdminLayout>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t("quotes.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("quotes.subtitle")}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            aria-label={t("common.refresh")}
-            variant="outline"
-            onClick={() => void fetchList()}
-            disabled={loading}
-          >
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </Button>
-          <AdminExportButton
-            onClick={() => void exportQuotes()}
-            disabled={total === 0 || exporting}
-            label={exporting ? t("common.exporting") : undefined}
-          />
-          {canManage && (
-            <Button onClick={() => openCreate()}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              {t("quotes.new")}
-            </Button>
+      <div className="space-y-4">
+        <PageHeader
+          title={t("quotes.title")}
+          count={tabCount}
+          description={t("quotes.subtitle")}
+          actions={
+            <>
+              <Button
+                aria-label={t("common.refresh")}
+                variant="outline"
+                onClick={() => void fetchList()}
+                disabled={loading}
+              >
+                <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              </Button>
+              <AdminExportButton
+                onClick={() => void exportQuotes()}
+                disabled={total === 0 || exporting}
+                label={exporting ? t("common.exporting") : undefined}
+              />
+              {canManage && (
+                <Button onClick={() => openCreate()}>
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  {t("quotes.new")}
+                </Button>
+              )}
+            </>
+          }
+        />
+
+        <ListTabs
+          label={t("quotes.field.status")}
+          tabs={statusTabs(t("common.all"), QUOTE_STATUSES, tabCounts, statusFilter, (value) =>
+            t(`quotes.status.${value}`),
           )}
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="mb-3 flex flex-wrap items-end gap-2">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            aria-label={t("common.search")}
-            className="pl-8"
-            placeholder={t("quotes.filter.search")}
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-        </div>
-        <div className="min-w-[180px]">
-          <Select
-            value={statusFilter || "__all__"}
-            onValueChange={(v) => {
-              setStatusFilter(v === "__all__" ? "" : (v as QuoteStatus));
-              setPage(1);
-            }}
-          >
-            <SelectTrigger aria-label={t("quotes.field.status")}>
-              <SelectValue placeholder={t("quotes.filter.status")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">{t("quotes.filter.all")}</SelectItem>
-              {QUOTE_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {t(`quotes.status.${s}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="w-[160px]">
-          <Input
-            aria-label={t("quotes.filter.minValue")}
-            inputMode="numeric"
-            placeholder={t("quotes.filter.minValue")}
-            value={minValue ? formatNumber(Number(minValue), lang) : ""}
-            onChange={(e) => setMinValue(String(parseVnd(e.target.value) || ""))}
-          />
-        </div>
-        <div className="w-[160px]">
-          <Input
-            aria-label={t("quotes.filter.maxValue")}
-            inputMode="numeric"
-            placeholder={t("quotes.filter.maxValue")}
-            value={maxValue ? formatNumber(Number(maxValue), lang) : ""}
-            onChange={(e) => setMaxValue(String(parseVnd(e.target.value) || ""))}
-          />
-        </div>
-      </div>
-
-      {loading && rows.length === 0 ? (
-        <ListSkeleton />
-      ) : error ? (
-        <PageError message={error} onRetry={() => void fetchList()} />
-      ) : rows.length === 0 && Object.keys(listFilters).length > 0 ? (
-        <PageNoMatches
-          onClear={() => {
-            setSearchInput("");
-            setSearch("");
-            setStatusFilter("");
-            setMinValue("");
-            setMaxValue("");
+          value={statusFilter}
+          onChange={(next) => {
+            setStatusFilter(next);
             setPage(1);
-            setSearchParams({});
           }}
         />
-      ) : rows.length === 0 ? (
-        <div className="rounded-lg border bg-card p-10 text-center">
-          <p className="text-muted-foreground">{t("quotes.empty")}</p>
-          {canManage && (
-            <Button variant="outline" className="mt-4" onClick={() => openCreate()}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              {t("quotes.emptyCta")}
-            </Button>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* Desktop table (xl+ only — sidebar-open laptops still cramp a
+        <ListPanel
+          search={
+            <>
+              <div className="relative flex-1 min-w-[220px]">
+                <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  aria-label={t("common.search")}
+                  className="pl-8"
+                  placeholder={t("quotes.filter.search")}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                />
+              </div>
+            </>
+          }
+          filterCount={
+            [minValue !== "", maxValue !== "", customerIdFilter !== undefined].filter(Boolean)
+              .length
+          }
+          filtersOpen={filtersOpen}
+          onFiltersOpenChange={setFiltersOpen}
+          onClear={
+            searchInput !== "" ||
+            statusFilter !== "" ||
+            [minValue !== "", maxValue !== "", customerIdFilter !== undefined].some(Boolean)
+              ? () => {
+                  setSearchInput("");
+                  setSearch("");
+                  setStatusFilter("");
+                  setMinValue("");
+                  setMaxValue("");
+                  setPage(1);
+                  setSearchParams({});
+                }
+              : undefined
+          }
+          filters={
+            <>
+              <div className="space-y-1">
+                <Label className="text-xs" htmlFor="quote-minValue">
+                  {t("quotes.filter.minValue")}
+                </Label>
+                <Input
+                  id="quote-minValue"
+                  aria-label={t("quotes.filter.minValue")}
+                  inputMode="numeric"
+                  value={minValue ? formatNumber(Number(minValue), lang) : ""}
+                  onChange={(e) => setMinValue(String(parseVnd(e.target.value) || ""))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs" htmlFor="quote-maxValue">
+                  {t("quotes.filter.maxValue")}
+                </Label>
+                <Input
+                  id="quote-maxValue"
+                  aria-label={t("quotes.filter.maxValue")}
+                  inputMode="numeric"
+                  value={maxValue ? formatNumber(Number(maxValue), lang) : ""}
+                  onChange={(e) => setMaxValue(String(parseVnd(e.target.value) || ""))}
+                />
+              </div>
+            </>
+          }
+        >
+          {loading && rows.length === 0 ? (
+            <div className="p-3">
+              <ListSkeleton />
+            </div>
+          ) : error ? (
+            <PageError message={error} onRetry={() => void fetchList()} />
+          ) : rows.length === 0 && Object.keys(listFilters).length > 0 ? (
+            <div className="p-3">
+              <PageNoMatches
+                onClear={() => {
+                  setSearchInput("");
+                  setSearch("");
+                  setStatusFilter("");
+                  setMinValue("");
+                  setMaxValue("");
+                  setPage(1);
+                  setSearchParams({});
+                }}
+              />
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="p-10 text-center">
+              <p className="text-muted-foreground">{t("quotes.empty")}</p>
+              {canManage && (
+                <Button variant="outline" className="mt-4" onClick={() => openCreate()}>
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  {t("quotes.emptyCta")}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Desktop table (xl+ only — sidebar-open laptops still cramp a
               9-col table at lg, so we defer to xl to avoid horizontal scroll). */}
-          <div className="hidden overflow-x-auto rounded-lg border bg-card xl:block">
-            <table className="w-full min-w-[1080px] divide-y text-sm">
-              <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                <tr>
-                  <Th>{t("quotes.field.code")}</Th>
-                  <Th>{t("quotes.field.opportunity")}</Th>
-                  <Th>{t("quotes.field.customer")}</Th>
-                  <Th className="text-right">{t("quotes.field.grandTotal")}</Th>
-                  <Th>{t("quotes.field.status")}</Th>
-                  <Th>{t("quotes.field.validUntil")}</Th>
-                  <Th>{t("quotes.field.owner")}</Th>
-                  <Th className="text-right">{t("quotes.field.version")}</Th>
-                  <Th className="sticky right-0 z-10 min-w-36 bg-muted/40 text-right shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)]">
-                    &nbsp;
-                  </Th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
+              <div className="hidden overflow-x-auto xl:block">
+                <table className="w-full divide-y text-sm">
+                  <thead className="bg-muted/40 text-xs text-muted-foreground">
+                    <tr>
+                      <Th>{t("quotes.field.code")}</Th>
+                      <Th>{t("quotes.field.opportunity")}</Th>
+                      <Th>{t("quotes.field.customer")}</Th>
+                      <Th className="text-right">{t("quotes.field.grandTotal")}</Th>
+                      <Th>{t("quotes.field.status")}</Th>
+                      <Th>{t("quotes.field.validUntil")}</Th>
+                      <Th>{t("quotes.field.owner")}</Th>
+                      <Th className="text-right">{t("quotes.field.version")}</Th>
+                      <Th className="sticky right-0 z-10 min-w-36 bg-muted/40 text-right shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)]">
+                        &nbsp;
+                      </Th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {rows.map((r) => {
+                      const isPending = pendingAction === r.id;
+                      return (
+                        <tr
+                          key={r.id}
+                          className="cursor-pointer hover:bg-muted/20"
+                          {...rowAction(() => navigate(`/admin/quotes/${r.id}`))}
+                        >
+                          <Td className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <Link
+                              to={`/admin/quotes/${r.id}`}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {r.code}
+                            </Link>
+                          </Td>
+                          <Td className="min-w-40">{r.opportunityName ?? "—"}</Td>
+                          <Td className="min-w-40">{r.customerName ?? "—"}</Td>
+                          <Td className="whitespace-nowrap text-right font-medium">
+                            {r.status === "Draft" && r.grandTotal === 0
+                              ? t("quotes.inputPrice.pricePending")
+                              : formatMoney(r.grandTotal, r.currency)}
+                          </Td>
+                          <Td>
+                            <StatusCell status={r.status} expiring={r.isExpiringSoon} t={t} />
+                          </Td>
+                          <Td className="whitespace-nowrap text-muted-foreground">
+                            {formatDate(r.validUntil)}
+                          </Td>
+                          <Td className="whitespace-nowrap">{r.ownerName ?? "—"}</Td>
+                          <Td className="text-right">V{r.version}</Td>
+                          <Td
+                            className="sticky right-0 z-10 min-w-36 bg-card text-right shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)]"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <RowActions
+                              row={r}
+                              canManage={canManage}
+                              canApprove={canApprove && r.approvalApproverUserId === currentUserId}
+                              canSend={canSend}
+                              pending={isPending}
+                              onSubmit={handleSubmit}
+                              onApprove={handleApprove}
+                              onSend={handleSend}
+                              onCancel={handleCancel}
+                              onDelete={handleDelete}
+                              t={t}
+                            />
+                          </Td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Card grid (<xl). Single col on phones, 2 cols from sm upward. */}
+              <ul className="grid gap-2 sm:grid-cols-2 p-3 xl:hidden">
                 {rows.map((r) => {
                   const isPending = pendingAction === r.id;
                   return (
-                    <tr
+                    <li
                       key={r.id}
-                      className="cursor-pointer hover:bg-muted/20"
+                      className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/20"
                       {...rowAction(() => navigate(`/admin/quotes/${r.id}`))}
                     >
-                      <Td className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <Link
-                          to={`/admin/quotes/${r.id}`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {r.code}
-                        </Link>
-                      </Td>
-                      <Td className="min-w-40">{r.opportunityName ?? "—"}</Td>
-                      <Td className="min-w-40">{r.customerName ?? "—"}</Td>
-                      <Td className="whitespace-nowrap text-right font-medium">
-                        {r.status === "Draft" && r.grandTotal === 0
-                          ? t("quotes.inputPrice.pricePending")
-                          : formatMoney(r.grandTotal, r.currency)}
-                      </Td>
-                      <Td>
+                      <div className="mb-1 flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-start gap-2">
+                          <Link
+                            to={`/admin/quotes/${r.id}`}
+                            className="text-base font-semibold text-primary hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {r.code}
+                          </Link>
+                        </div>
+                        <span className="whitespace-nowrap text-xs text-muted-foreground">
+                          V{r.version}
+                        </span>
+                      </div>
+                      <div className="mb-2 text-sm text-foreground">{r.opportunityName ?? "—"}</div>
+                      {r.customerName && (
+                        <div className="mb-2 text-xs text-muted-foreground">{r.customerName}</div>
+                      )}
+                      <div className="mb-2 flex items-center justify-between gap-2">
                         <StatusCell status={r.status} expiring={r.isExpiringSoon} t={t} />
-                      </Td>
-                      <Td className="whitespace-nowrap text-muted-foreground">
-                        {formatDate(r.validUntil)}
-                      </Td>
-                      <Td className="whitespace-nowrap">{r.ownerName ?? "—"}</Td>
-                      <Td className="text-right">V{r.version}</Td>
-                      <Td
-                        className="sticky right-0 z-10 min-w-36 bg-card text-right shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)]"
+                        <div className="whitespace-nowrap text-sm font-semibold">
+                          {r.status === "Draft" && r.grandTotal === 0
+                            ? t("quotes.inputPrice.pricePending")
+                            : formatMoney(r.grandTotal, r.currency)}
+                        </div>
+                      </div>
+                      <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+                        <span>
+                          {t("quotes.field.validUntil")}: {formatDate(r.validUntil)}
+                        </span>
+                        {r.ownerName && <span className="truncate">{r.ownerName}</span>}
+                      </div>
+                      <div
+                        className="-mx-1 flex flex-wrap items-center gap-1 border-t pt-2"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <RowActions
@@ -547,108 +648,43 @@ const AdminQuotes = () => {
                           onCancel={handleCancel}
                           onDelete={handleDelete}
                           t={t}
+                          compact
                         />
-                      </Td>
-                    </tr>
+                      </div>
+                    </li>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </ul>
+            </>
+          )}
 
-          {/* Card grid (<xl). Single col on phones, 2 cols from sm upward. */}
-          <ul className="grid gap-2 sm:grid-cols-2 xl:hidden">
-            {rows.map((r) => {
-              const isPending = pendingAction === r.id;
-              return (
-                <li
-                  key={r.id}
-                  className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/20"
-                  {...rowAction(() => navigate(`/admin/quotes/${r.id}`))}
+          {rows.length > 0 && totalPages > 1 && (
+            <div className="flex items-center justify-between border-t p-3 text-sm text-muted-foreground">
+              <span>
+                {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} / {total}
+              </span>
+              <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
-                  <div className="mb-1 flex items-start justify-between gap-2">
-                    <div className="flex min-w-0 items-start gap-2">
-                      <Link
-                        to={`/admin/quotes/${r.id}`}
-                        className="text-base font-semibold text-primary hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {r.code}
-                      </Link>
-                    </div>
-                    <span className="whitespace-nowrap text-xs text-muted-foreground">
-                      V{r.version}
-                    </span>
-                  </div>
-                  <div className="mb-2 text-sm text-foreground">{r.opportunityName ?? "—"}</div>
-                  {r.customerName && (
-                    <div className="mb-2 text-xs text-muted-foreground">{r.customerName}</div>
-                  )}
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <StatusCell status={r.status} expiring={r.isExpiringSoon} t={t} />
-                    <div className="whitespace-nowrap text-sm font-semibold">
-                      {r.status === "Draft" && r.grandTotal === 0
-                        ? t("quotes.inputPrice.pricePending")
-                        : formatMoney(r.grandTotal, r.currency)}
-                    </div>
-                  </div>
-                  <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>
-                      {t("quotes.field.validUntil")}: {formatDate(r.validUntil)}
-                    </span>
-                    {r.ownerName && <span className="truncate">{r.ownerName}</span>}
-                  </div>
-                  <div
-                    className="-mx-1 flex flex-wrap items-center gap-1 border-t pt-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <RowActions
-                      row={r}
-                      canManage={canManage}
-                      canApprove={canApprove && r.approvalApproverUserId === currentUserId}
-                      canSend={canSend}
-                      pending={isPending}
-                      onSubmit={handleSubmit}
-                      onApprove={handleApprove}
-                      onSend={handleSend}
-                      onCancel={handleCancel}
-                      onDelete={handleDelete}
-                      t={t}
-                      compact
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </>
-      )}
-
-      {rows.length > 0 && totalPages > 1 && (
-        <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} / {total}
-          </span>
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              {t("common.prev")}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              {t("common.next")}
-            </Button>
-          </div>
-        </div>
-      )}
+                  {t("common.prev")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  {t("common.next")}
+                </Button>
+              </div>
+            </div>
+          )}
+        </ListPanel>
+      </div>
 
       {/* Start with the Opportunity; output pricing belongs in detail after Procurement. */}
       <Dialog open={creating} onOpenChange={(open) => !open && setCreating(false)}>
