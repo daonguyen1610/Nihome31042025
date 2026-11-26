@@ -21,6 +21,13 @@ public class GoogleDriveCredential : IConcurrencyTracked
     public string ConstructionAcceptanceFolder { get; set; } = "05_ThiCong/03_ChatLuong_NghiemThu";
     public string ProcurementFolder { get; set; } = "06_CungUng";
     public string FinanceContractsFolder { get; set; } = "02_HopDong";
+    public string DesignIfcFolder { get; set; } = "03_ThietKe/03_ChiTiet_IFC";
+    public string ConstructionPreparationFolder { get; set; } = "05_ThiCong/01_ChuanBi";
+    public string ConstructionDiaryFolder { get; set; } = "05_ThiCong/02_NhatKy_BaoCao";
+    public string HseFolder { get; set; } = "05_ThiCong/04_ATLD_HSE";
+    public string QuantitySurveyFolder { get; set; } = "05_ThiCong/05_QS_KhoiLuong";
+    public string FinanceFolder { get; set; } = "07_TaiChinh";
+    public string HandoverFolder { get; set; } = "08_BanGiao_BaoHanh";
     public bool SupportsAllDrives { get; set; } = true;
     public bool DeleteDriveFilesOnWebDelete { get; set; }
     public bool DeleteWebRecordsOnDriveDelete { get; set; } = true;

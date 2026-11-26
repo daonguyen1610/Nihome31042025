@@ -242,7 +242,7 @@ NICON (hoặc người được ủy quyền) cần chốt:
 13. Chứng từ thanh toán cho 4 loại gói đầu vào (chỉ vật tư, chỉ nhân công, thuê máy, hỗn hợp) theo bộ ISO; FA (chị K/Kiara) bổ sung mục thiếu; điều kiện tạm ứng/trả trước.
 14. Đối chiếu bộ ISO trong `docs/Nicon/ISO/` vào checklist QA/QC và điều kiện khởi công theo loại công trình; NICON xác minh các mẫu được dẫn chiếu nhưng chưa thấy file (`TC-M02`, `TC-M23`, `TQT-M00`, `TC-M00`) và các mã trùng.
 15. Công thức ngưỡng BOQ 85/95/trên 100%.
-16. Chuyển hồ sơ Thiết kế, Pháp lý, Thi công cũ sang Dự án; chuyển thư mục `01_Khao_sat` vào `01_CRM_PreDesign`.
+16. Chuyển hồ sơ Thiết kế, Pháp lý, Thi công cũ sang Dự án.
 17. Định nghĩa KPI cho các vị trí còn thiếu; sơ đồ phòng ban – vai trò chính thức.
 18. Ủy quyền phát hành điện tử, thu hồi phiên bản cũ, thời hạn lưu và thẩm quyền hủy hồ sơ theo quy trình kiểm soát tài liệu ISO.
 
@@ -582,7 +582,7 @@ Mã gói thầu `TD-YYYY-NNNN` tiếp nối mã lớn nhất đang dùng, nên x
 Ghi khảo sát gắn với Cơ hội hoặc Dự án: chụp ảnh, quay video ngay trong ứng dụng, tải tệp, ghi chú kỹ thuật, thời điểm và tọa độ. Tab **Điều kiện** ghi lộ giới, cao độ, tình trạng hạ tầng bằng form hoặc nhập CSV UTF-8 (tất cả hoặc không). Bề rộng lối vào và cao độ nền tính bằng mét. File PDF khảo sát gồm mọi điều kiện đã ghi.
 
 - Quyền: có quyền xem khảo sát và quyền quản lý khảo sát riêng. Mặc định Kinh doanh có cả hai, PM chỉ xem.
-- Mỗi khảo sát thuộc một Dự án; Cơ hội, Dự án và Khách hàng phải khớp nhau. Tệp lưu ở thư mục `01_Khao_sat` của dự án. Đổi dự án thì tệp được chuyển sang dự án mới.
+- Mỗi khảo sát thuộc một Dự án; Cơ hội, Dự án và Khách hàng phải khớp nhau. Tệp lưu ở thư mục `01_CoHoi_BaoGia/01_KhaoSat` của dự án. Đổi dự án thì tệp được chuyển sang dự án mới.
 - Trạng thái đồng bộ Drive hiển thị trên từng tệp (xem [3.7](#37-tài-liệu-dự-án-và-google-drive)).
 
 #### 3.1.7 Hợp đồng
@@ -1155,16 +1155,30 @@ Danh mục **Tài liệu dự án** ([3.0](#30-dự-án)) gom tệp của Báo g
 
 #### 3.7.2 Cấu trúc thư mục
 
-Thư mục được tạo khi tệp đầu tiên của danh mục đồng bộ. Có 9 danh mục:
+Mỗi dự án có cây 8 thư mục theo PRD v2, tạo tự động khi Drive đang kết nối:
 
-- `01_Khao_sat` và `01_CRM_PreDesign` (hai thư mục ngang hàng)
-- `02_Thiet_ke` với 3 thư mục con (Ý tưởng, Cơ sở, Chi tiết). Tạo Hồ sơ thiết kế sẽ lên lịch tạo 3 thư mục này ngay, kể cả chưa có hợp đồng hay tệp; Drive tắt thì chờ đến khi kết nối lại.
-- `03_Xin_phep_Phap_ly`
-- `04_Thi_cong_Nghiem_thu`
-- `05_Cung_ung_Vat_tu`
-- `06_Tai_chinh_Hop_dong`
+| Thư mục | Loại hồ sơ trên hệ thống | Tệp tự đưa vào từ |
+|---|---|---|
+| `01_CoHoi_BaoGia` | Hồ sơ cơ hội, báo giá | Báo giá |
+| `01_CoHoi_BaoGia/01_KhaoSat` | Khảo sát | Khảo sát |
+| `02_HopDong` | Hợp đồng | Hợp đồng, phụ lục (mọi loại hợp đồng) |
+| `03_ThietKe/01_Concept` | Concept | Chỉ tải trực tiếp |
+| `03_ThietKe/02_CoSo` | Thiết kế cơ sở | Hồ sơ thiết kế cơ sở |
+| `03_ThietKe/03_ChiTiet_IFC` | Thiết kế chi tiết (IFC) | Chỉ tải trực tiếp |
+| `03_ThietKe/04_ShopDrawing` | Shop drawing | Shop drawing |
+| `04_PhapLy` | Pháp lý | Hồ sơ nộp và giấy phép |
+| `05_ThiCong/01_ChuanBi` | Chuẩn bị thi công | Màn hình chuẩn bị thi công |
+| `05_ThiCong/02_NhatKy_BaoCao` | Nhật ký và báo cáo công trường | Chỉ tải trực tiếp |
+| `05_ThiCong/03_ChatLuong_NghiemThu` | Thi công và nghiệm thu | Nghiệm thu |
+| `05_ThiCong/04_ATLD_HSE` | An toàn lao động | Chỉ tải trực tiếp |
+| `05_ThiCong/05_QS_KhoiLuong` | Khối lượng | Chỉ tải trực tiếp |
+| `06_CungUng` | Cung ứng và vật tư | RFQ; còn lại tải trực tiếp |
+| `07_TaiChinh` | Tài chính | Chỉ tải trực tiếp |
+| `08_BanGiao_BaoHanh` | Bàn giao và bảo hành | Hoàn công, bàn giao |
 
-NICON muốn đặt Khảo sát bên trong CRM Pre-Design, nhưng chưa chuyển tệp cho đến khi có đợt chuyển cấu trúc được duyệt và đảo ngược được. Đổi tên dự án không ảnh hưởng định danh nội bộ. Quyền truy cập do hệ thống kiểm soát; chia sẻ nhóm trên Drive chưa đồng bộ.
+"Tải trực tiếp" là tải ở trang chi tiết dự án và chọn đúng loại hồ sơ. Bảng trên là đường dẫn mặc định; **cả 16 đường dẫn đều sửa được** trong Cài đặt Drive, miễn không có hai loại hồ sơ dùng chung một đường dẫn. Cách đổi xem mục 3.7.1: tắt đồng bộ rồi mới lưu; thư mục ở đường dẫn mới được tạo ở lần đồng bộ sau, thư mục đã có trên Drive không bị đổi tên, chuyển hay xoá. Người không phải quản lý dự án chỉ thấy loại hồ sơ thuộc quyền xem của mình (ví dụ Tài chính cần quyền xem thanh toán). Quyền truy cập do hệ thống kiểm soát; chia sẻ nhóm trên Drive chưa đồng bộ.
+
+Hệ thống còn dùng đường dẫn mặc định cũ được tự chuyển sang cây này khi nâng cấp. Trên Drive không có gì bị chuyển hay xoá: thư mục cũ và tệp trong đó giữ nguyên, vẫn tải về được từ hệ thống, nhưng thay đổi sau này trong thư mục cũ trên Drive không còn được cập nhật về. Đường dẫn tự đặt thì giữ nguyên.
 
 #### 3.7.3 Đồng bộ và xóa tệp
 

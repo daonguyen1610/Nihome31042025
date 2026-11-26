@@ -333,7 +333,7 @@ public sealed class GoogleDriveSettingsStore(
     {
         if (request.Folders is null)
             throw new GoogleDriveSettingsValidationException(
-                "Folders là bắt buộc. Ví dụ: cung cấp đủ chín đường dẫn thư mục nghiệp vụ.");
+                "Folders là bắt buộc. Ví dụ: cung cấp đủ mọi đường dẫn thư mục nghiệp vụ.");
         var normalized = new UpdateGoogleDriveConfigurationRequest
         {
             Enabled = request.Enabled,
@@ -354,6 +354,13 @@ public sealed class GoogleDriveSettingsStore(
                 ConstructionAcceptance = Trim(request.Folders.ConstructionAcceptance),
                 Procurement = Trim(request.Folders.Procurement),
                 FinanceContracts = Trim(request.Folders.FinanceContracts),
+                DesignIfc = Trim(request.Folders.DesignIfc),
+                ConstructionPreparation = Trim(request.Folders.ConstructionPreparation),
+                ConstructionDiary = Trim(request.Folders.ConstructionDiary),
+                Hse = Trim(request.Folders.Hse),
+                QuantitySurvey = Trim(request.Folders.QuantitySurvey),
+                Finance = Trim(request.Folders.Finance),
+                Handover = Trim(request.Folders.Handover),
             },
             SupportsAllDrives = request.SupportsAllDrives,
             DeleteDriveFilesOnWebDelete = request.DeleteDriveFilesOnWebDelete,
@@ -439,6 +446,13 @@ public sealed class GoogleDriveSettingsStore(
             [nameof(folders.ConstructionAcceptance)] = folders.ConstructionAcceptance,
             [nameof(folders.Procurement)] = folders.Procurement,
             [nameof(folders.FinanceContracts)] = folders.FinanceContracts,
+            [nameof(folders.DesignIfc)] = folders.DesignIfc,
+            [nameof(folders.ConstructionPreparation)] = folders.ConstructionPreparation,
+            [nameof(folders.ConstructionDiary)] = folders.ConstructionDiary,
+            [nameof(folders.Hse)] = folders.Hse,
+            [nameof(folders.QuantitySurvey)] = folders.QuantitySurvey,
+            [nameof(folders.Finance)] = folders.Finance,
+            [nameof(folders.Handover)] = folders.Handover,
         };
         foreach (var (name, value) in values)
         {
@@ -447,7 +461,7 @@ public sealed class GoogleDriveSettingsStore(
                 value.Contains('\\') || HasControlCharacters(value) ||
                 segments.Any(segment => segment.Length is < 1 or > 100 || segment is "." or ".."))
                 throw new GoogleDriveSettingsValidationException(
-                    $"Folders.{name} phải là đường dẫn thư mục hợp lệ. Ví dụ: 02_Thiet_ke/01_So_bo_Concept.");
+                    $"Folders.{name} phải là đường dẫn thư mục hợp lệ. Ví dụ: 03_ThietKe/01_Concept.");
         }
         if (values.Values.Distinct(StringComparer.OrdinalIgnoreCase).Count() != values.Count)
             throw new GoogleDriveSettingsValidationException(
@@ -466,7 +480,7 @@ public sealed class GoogleDriveSettingsStore(
         var paths = FolderValues(settings.Folders);
         if (paths.Any(path => path.Length > 0) && paths.Any(path => path.Length == 0))
             throw new GoogleDriveSettingsValidationException(
-                "Khi nhập cấu trúc thư mục, cần cung cấp đủ chín đường dẫn nghiệp vụ.");
+                "Khi nhập cấu trúc thư mục, cần cung cấp đủ mọi đường dẫn nghiệp vụ.");
         if (paths.All(path => path.Length > 0)) ValidateFolderPaths(settings.Folders);
     }
 
@@ -481,6 +495,13 @@ public sealed class GoogleDriveSettingsStore(
         folders.ConstructionAcceptance,
         folders.Procurement,
         folders.FinanceContracts,
+        folders.DesignIfc,
+        folders.ConstructionPreparation,
+        folders.ConstructionDiary,
+        folders.Hse,
+        folders.QuantitySurvey,
+        folders.Finance,
+        folders.Handover,
     ];
 
     private static bool FolderPathsEqual(GoogleDriveCredential settings, GoogleDriveFolderOptions folders) =>
@@ -516,6 +537,13 @@ public sealed class GoogleDriveSettingsStore(
         ConstructionAcceptance = settings.ConstructionAcceptanceFolder,
         Procurement = settings.ProcurementFolder,
         FinanceContracts = settings.FinanceContractsFolder,
+        DesignIfc = settings.DesignIfcFolder,
+        ConstructionPreparation = settings.ConstructionPreparationFolder,
+        ConstructionDiary = settings.ConstructionDiaryFolder,
+        Hse = settings.HseFolder,
+        QuantitySurvey = settings.QuantitySurveyFolder,
+        Finance = settings.FinanceFolder,
+        Handover = settings.HandoverFolder,
     };
 
     private static void ApplyFolders(GoogleDriveCredential settings, GoogleDriveFolderOptions folders)
@@ -529,6 +557,13 @@ public sealed class GoogleDriveSettingsStore(
         settings.ConstructionAcceptanceFolder = folders.ConstructionAcceptance;
         settings.ProcurementFolder = folders.Procurement;
         settings.FinanceContractsFolder = folders.FinanceContracts;
+        settings.DesignIfcFolder = folders.DesignIfc;
+        settings.ConstructionPreparationFolder = folders.ConstructionPreparation;
+        settings.ConstructionDiaryFolder = folders.ConstructionDiary;
+        settings.HseFolder = folders.Hse;
+        settings.QuantitySurveyFolder = folders.QuantitySurvey;
+        settings.FinanceFolder = folders.Finance;
+        settings.HandoverFolder = folders.Handover;
     }
 
     private static GoogleDriveAdminConfigurationResponse EmptyAdminResponse()

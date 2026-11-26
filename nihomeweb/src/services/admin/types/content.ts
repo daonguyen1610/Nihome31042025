@@ -490,6 +490,13 @@ export interface GoogleDriveFolderConfiguration {
   constructionAcceptance: string;
   procurement: string;
   financeContracts: string;
+  designIfc: string;
+  constructionPreparation: string;
+  constructionDiary: string;
+  hse: string;
+  quantitySurvey: string;
+  finance: string;
+  handover: string;
 }
 
 export interface GoogleDriveAdminConfigurationResponse {

@@ -99,7 +99,8 @@ public sealed class OperationalProjectDocumentsControllerTests(
         var categories = (await ReadJsonAsync(response)).EnumerateArray().ToArray();
         categories.Select(category => category.GetProperty("value").GetString()).Should().Equal(
             "CrmPreDesign", "DesignConcept", "DesignBasic", "DesignShopDrawing",
-            "LegalPermits", "ConstructionAcceptance", "Procurement", "FinanceContracts", "Survey");
+            "LegalPermits", "ConstructionAcceptance", "Procurement", "FinanceContracts", "Survey", "Handover",
+            "DesignIfc", "ConstructionPreparation", "ConstructionDiary", "Hse", "QuantitySurvey", "Finance");
         categories.Should().OnlyContain(category =>
             !string.IsNullOrWhiteSpace(category.GetProperty("folderPath").GetString()) &&
             category.GetProperty("translationKey").GetString() ==

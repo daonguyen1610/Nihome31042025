@@ -2720,24 +2720,34 @@ vẫn là quyết định mở; việc publish checklist pháp lý trong sản p
 bộ quy trình QTC. 11 tiêu chí chấm điểm cá nhân trong `NS2-M01` khác 11 vị trí KPI của PRD;
 mức giữ lại 5% trong hợp đồng mẫu không phải công thức cảnh báo tiến độ.
 
-Thư mục Drive (PRD "8 lớp" không phải số thư mục cố định; code có chín
-`ProjectDocumentCategory`):
+Thư mục Drive theo PRD v2 mục 7. Mỗi `ProjectDocumentCategory` (trừ `Unclassified`) có một
+thư mục. Các đường dẫn dưới đây chỉ là mặc định (`GoogleDriveFolderOptions` và cột trong
+`google_drive_credentials`); quản trị viên sửa được tất cả trong Cài đặt Drive, không nơi nào
+trong mã được phụ thuộc vào giá trị đường dẫn:
 
 | Category | Đường dẫn |
 |---|---|
-| Survey | `01_Khao_sat` |
-| CRM Pre-Design | `01_CRM_PreDesign` |
-| Design Concept | `02_Thiet_ke/01_So_bo_Concept` |
-| Design Basic | `02_Thiet_ke/02_Co_so` |
-| Design Shop Drawing | `02_Thiet_ke/03_Chi_tiet_ShopDrawing` |
-| Legal | `03_Xin_phep_Phap_ly` |
-| Construction/Acceptance | `04_Thi_cong_Nghiem_thu` |
-| Procurement | `05_Cung_ung_Vat_tu` |
-| Finance/Contracts | `06_Tai_chinh_Hop_dong` |
+| Survey | `01_CoHoi_BaoGia/01_KhaoSat` |
+| CrmPreDesign | `01_CoHoi_BaoGia` |
+| DesignConcept | `03_ThietKe/01_Concept` |
+| DesignBasic | `03_ThietKe/02_CoSo` |
+| DesignShopDrawing | `03_ThietKe/04_ShopDrawing` |
+| LegalPermits | `04_PhapLy` |
+| ConstructionAcceptance | `05_ThiCong/03_ChatLuong_NghiemThu` |
+| Procurement | `06_CungUng` |
+| FinanceContracts | `02_HopDong` |
+| DesignIfc | `03_ThietKe/03_ChiTiet_IFC` |
+| ConstructionPreparation | `05_ThiCong/01_ChuanBi` |
+| ConstructionDiary | `05_ThiCong/02_NhatKy_BaoCao` |
+| Hse | `05_ThiCong/04_ATLD_HSE` |
+| QuantitySurvey | `05_ThiCong/05_QS_KhoiLuong` |
+| Finance | `07_TaiChinh` |
+| Handover | `08_BanGiao_BaoHanh` |
 
-Mục tiêu nghiệp vụ đặt Survey dưới CRM Pre-Design. Giữ hai đường dẫn hiện tại cho tới khi có
-migration topology được duyệt (tắt sync, xả claim, kiểm kê binding, xử lý xung đột, di
-chuyển/rebind, kiểm checksum, có rollback); đổi cấu hình không di chuyển file cũ.
+Migration `SwitchDriveFoldersToPrdV2` bỏ binding cũ mà không di chuyển tệp vì chưa có dữ liệu
+production. Sau khi khách dùng Drive thật, đổi topology phải có migration đảo ngược được (tắt
+sync, xả claim, kiểm kê binding, xử lý xung đột, di chuyển/rebind, kiểm checksum); đổi cấu
+hình không di chuyển file cũ.
 
 Ranh giới import:
 

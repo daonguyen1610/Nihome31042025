@@ -79,6 +79,13 @@ public enum ProjectDocumentCategory
     Procurement = 7,
     FinanceContracts = 8,
     Survey = 9,
+    Handover = 10,
+    DesignIfc = 11,
+    ConstructionPreparation = 12,
+    ConstructionDiary = 13,
+    Hse = 14,
+    QuantitySurvey = 15,
+    Finance = 16,
 }
 
 public enum ProjectDocumentSourceModule
