@@ -75,6 +75,7 @@ public class ContractsController(
         [FromQuery] int pageSize = 20,
         [FromQuery] string? sortBy = null,
         [FromQuery] string? sortDirection = null,
+        [FromQuery] bool overdueOnly = false,
         CancellationToken ct = default)
     {
         var userId = GetUserId();
@@ -86,7 +87,7 @@ public class ContractsController(
             userId.Value, canSeeAll, status, direction, type, vendorId,
             ownerUserId, customerId, operationalProjectId, search,
             signedFrom, signedTo, endFrom, endTo, valueMin, valueMax, page, pageSize,
-            sortBy, sortDirection, includeAll: false, ct: ct);
+            sortBy, sortDirection, includeAll: false, ct: ct, overdueOnly: overdueOnly);
         return Ok(result);
     }
 
@@ -109,6 +110,7 @@ public class ContractsController(
         [FromQuery] decimal? valueMax,
         [FromQuery] string? sortBy = null,
         [FromQuery] string? sortDirection = null,
+        [FromQuery] bool overdueOnly = false,
         CancellationToken ct = default)
     {
         var userId = GetUserId();
@@ -121,7 +123,7 @@ public class ContractsController(
             ownerUserId, customerId, operationalProjectId, search,
             signedFrom, signedTo, endFrom, endTo, valueMin, valueMax,
             page: 1, pageSize: 1, sortBy: sortBy, sortDirection: sortDirection,
-            includeAll: true, ct: ct));
+            includeAll: true, ct: ct, overdueOnly: overdueOnly));
     }
 
     [HttpGet("filter-options")]

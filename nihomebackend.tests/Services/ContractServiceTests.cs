@@ -707,6 +707,38 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task List_CountsEveryStatusAndOverdueTabIgnoringTheChosenTab()
+    {
+        await _sut.CreateAsync(Req(status: ContractStatus.Draft), 1, canReassignOwner: true);
+        var late = await _sut.CreateAsync(Req(customerId: _customerB), 1, canReassignOwner: true);
+        _db.Contracts.Find(late.Id)!.Status = ContractStatus.Signed;
+        _db.ContractPaymentMilestones.Add(new ContractPaymentMilestone
+        {
+            ContractId = late.Id,
+            Order = 1,
+            Name = "Late",
+            PercentValue = 100,
+            DueDate = DateTime.UtcNow.Date.AddDays(-1),
+        });
+        await _db.SaveChangesAsync();
+
+        var drafts = await _sut.ListAsync(1, true, status: ContractStatus.Draft);
+        Assert.Single(drafts.Items);
+        Assert.Equal(1, drafts.StatusCounts["Draft"]);
+        Assert.Equal(1, drafts.StatusCounts["Signed"]);
+        Assert.Equal(1, drafts.AllOverdueCount);
+
+        var overdue = await _sut.ListAsync(1, true, overdueOnly: true);
+        Assert.Equal(late.Id, Assert.Single(overdue.Items).Id);
+        Assert.Equal(1, overdue.Total);
+        Assert.Equal(2, overdue.StatusCounts.Values.Sum());
+
+        // Other filters narrow the tab counts too.
+        var otherCustomer = await _sut.ListAsync(1, true, customerId: _customerB);
+        Assert.Equal(new[] { "Signed" }, otherCustomer.StatusCounts.Keys);
+    }
+
+    [Fact]
     public async Task List_UsesCurrentValueAndExposesCollectionRisk()
     {
         var request = Req(value: 1_000m, end: new DateTime(2026, 9, 30), owner: 100);

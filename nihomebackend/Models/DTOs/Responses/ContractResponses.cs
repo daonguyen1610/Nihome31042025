@@ -145,6 +145,12 @@ public class ContractListResponse
     public decimal TotalCurrentValue { get; set; }
     public int OverdueContractCount { get; set; }
     public int DueSoonContractCount { get; set; }
+
+    /// <summary>Contracts per status under every filter except the status and overdue tabs.</summary>
+    public Dictionary<string, int> StatusCounts { get; set; } = new();
+
+    /// <summary>The overdue tab's count, under the same filters as <see cref="StatusCounts"/>.</summary>
+    public int AllOverdueCount { get; set; }
 }
 
 public class ContractFilterOptionsResponse
