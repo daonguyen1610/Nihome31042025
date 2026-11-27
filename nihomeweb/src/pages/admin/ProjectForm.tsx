@@ -226,7 +226,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       value={data.name}
                       onChange={(e) => update("name", e.target.value)}
-                      placeholder="Dự án nhà máy ABC..."
+                      placeholder={t("proj.placeholder.name")}
                       required
                     />
                   </FieldControl>
@@ -237,7 +237,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       value={data.client}
                       onChange={(e) => update("client", e.target.value)}
-                      placeholder="Tên chủ đầu tư"
+                      placeholder={t("proj.placeholder.client")}
                     />
                   </FieldControl>
                 </Field>
@@ -247,7 +247,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       value={data.location}
                       onChange={(e) => update("location", e.target.value)}
-                      placeholder="Tỉnh / thành phố"
+                      placeholder={t("proj.placeholder.location")}
                     />
                   </FieldControl>
                 </Field>
@@ -316,7 +316,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       value={data.scope}
                       onChange={(e) => update("scope", e.target.value)}
-                      placeholder="Thiết kế, thi công, hoàn thiện..."
+                      placeholder={t("proj.placeholder.scope")}
                     />
                   </FieldControl>
                 </Field>
@@ -332,7 +332,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
                     value={data.description ?? ""}
                     onChange={(e) => update("description", e.target.value)}
-                    placeholder="Mô tả tổng quan về dự án..."
+                    placeholder={t("proj.placeholder.description")}
                   />
                 </FieldControl>
               </Field>
@@ -358,13 +358,13 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
                   label={t("proj.field.challenges")}
                   items={data.challenges}
                   onChange={(items) => update("challenges", items)}
-                  placeholder="Thêm thách thức..."
+                  placeholder={t("proj.placeholder.challenge")}
                 />
                 <ListEditor
                   label={t("proj.field.solutions")}
                   items={data.solutions}
                   onChange={(items) => update("solutions", items)}
-                  placeholder="Thêm giải pháp..."
+                  placeholder={t("proj.placeholder.solution")}
                 />
               </div>
             </div>
