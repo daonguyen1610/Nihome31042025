@@ -319,7 +319,7 @@ test("hard-delete dialog polls pending work and completes only after retry succe
   await expect(page).toHaveURL(/\/admin\/operational-projects$/);
 });
 
-test("Design Project deletion removes the row after confirmation", async ({
+test("A design dossier is closed with a reason and cannot be deleted", async ({
   page,
   loginInBrowserAs,
 }) => {
@@ -343,46 +343,28 @@ test("Design Project deletion removes the row after confirmation", async ({
     status: "Active",
     updatedAt: "2026-09-03T00:00:00Z",
   };
-  let deleted = false;
+  let closedWith: string | null = null;
   await page.route(new RegExp("/api/(?:v1/)?design-projects(?:\\?.*)?$"), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        total: deleted ? 0 : 1,
+        total: 1,
         page: 1,
         pageSize: 20,
-        items: deleted ? [] : [designProject],
+        items: [{ ...designProject, status: closedWith ? "Cancelled" : "Active" }],
       }),
     }),
   );
   await page.route(
-    new RegExp(`/api/(?:v1/)?design-projects/${designProject.id}/deletion-impact$`),
-    (route) =>
-      route.fulfill({
+    new RegExp(`/api/(?:v1/)?design-projects/${designProject.id}/close$`),
+    async (route) => {
+      closedWith = (route.request().postDataJSON() as { reason: string }).reason;
+      await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
-          resourceType: "DesignProject",
-          resourceId: designProject.id,
-          resourceLabel: `${designProject.projectCode} · ${designProject.name}`,
-          requiredConfirmation: designProject.projectCode,
-          planToken: "c".repeat(64),
-          canDelete: true,
-          totalAffected: 1,
-          items: [],
-        }),
-      }),
-  );
-  await page.route(
-    new RegExp(`/api/(?:v1/)?design-projects/${designProject.id}$`),
-    async (route) => {
-      if (route.request().method() === "DELETE") {
-        deleted = true;
-        await route.fulfill({ status: 204 });
-        return;
-      }
-      await route.continue();
+        body: JSON.stringify({ ...designProject, status: "Cancelled" }),
+      });
     },
   );
 
@@ -390,17 +372,19 @@ test("Design Project deletion removes the row after confirmation", async ({
   const table = page.getByRole("table");
   await expect(table.getByText(designProject.name)).toBeVisible();
   const row = table.getByText(designProject.name).locator("xpath=ancestor::tr");
-  await row.getByRole("button", { name: /Delete|Xoá|删除|削除/i }).click();
-  const dialog = page.getByRole("alertdialog");
-  await dialog.getByRole("textbox").fill(designProject.projectCode);
-  await dialog
-    .getByRole("button", {
-      name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
-    })
-    .click();
+  await expect(row.getByRole("button", { name: /^(Delete|Xoá|Xóa|删除|削除)$/i })).toHaveCount(0);
+  const close = row.getByRole("button", { name: /Đóng hồ sơ|Close dossier/i });
+  await close.click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: /Đóng hồ sơ|Close dossier/i });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByRole("textbox").fill("  Khách dừng dự án  ");
+  await confirm.click();
 
-  await expect(table.getByText(designProject.name)).toHaveCount(0);
-  expect(deleted).toBe(true);
+  // The dossier stays in the list; it can no longer be edited or closed again.
+  await expect(close).toHaveCount(0);
+  await expect(table.getByText(designProject.name)).toBeVisible();
+  expect(closedWith).toBe("Khách dừng dự án");
 });
 
 test("Lead deletion uses preview confirmation and removes the row only after completion", async ({

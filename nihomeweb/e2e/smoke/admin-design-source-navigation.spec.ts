@@ -7,7 +7,7 @@ test("Design overview opens its customer and contract and respects CRM permissio
   loginInBrowserAs,
 }, testInfo) => {
   const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
-  const response = await api.get("/api/design-projects?pageSize=100", { headers });
+  const response = await api.get("/api/design-projects?pageSize=100&search=DP-SAMPLE", { headers });
   expect(response.status()).toBe(200);
   const project = (await response.json()).items.find(
     (item: { contractId?: number }) => item.contractId,

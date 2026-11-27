@@ -263,8 +263,6 @@ test("design team saves a role scoped to its current design project", async ({
     expect(procurementCandidate).toBeTruthy();
     expect(names.some((name) => name.includes(procurementCandidate.name))).toBe(false);
   } finally {
-    if (designProjectId)
-      await hardDeleteBusinessRoot(api, headers, `/api/design-projects/${designProjectId}`);
     if (operationalProjectId)
       await hardDeleteBusinessRoot(
         api,
@@ -338,8 +336,6 @@ for (const width of [390, 768]) {
         )
         .toBe(true);
     } finally {
-      if (designProjectId)
-        await hardDeleteBusinessRoot(api, headers, `/api/design-projects/${designProjectId}`);
       if (operationalProjectId)
         await hardDeleteBusinessRoot(
           api,

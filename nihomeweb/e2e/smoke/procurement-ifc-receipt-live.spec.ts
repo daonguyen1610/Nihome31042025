@@ -312,7 +312,6 @@ test("addressed Procurement user views and acknowledges released IFC", async ({
         }
       }
       if (drawingId) await hardDeleteBusinessRoot(api, headers, `/api/shop-drawings/${drawingId}`);
-      await hardDeleteBusinessRoot(api, headers, `/api/design-projects/${designId}`);
     }
     if (rootId) await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${rootId}`);
     await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);

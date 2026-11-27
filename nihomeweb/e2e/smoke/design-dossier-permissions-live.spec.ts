@@ -164,7 +164,6 @@ test("leaders save dossier rights while owner rows stay locked in every language
     await expect(page.getByRole("tab", { name: "Concept", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "New option", exact: true })).toHaveCount(0);
   } finally {
-    if (designId) await hardDeleteBusinessRoot(api, headers, `/api/design-projects/${designId}`);
     if (rootId) await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${rootId}`);
     await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
   }
@@ -183,7 +182,12 @@ for (const scenario of [
     loginInBrowserAs,
   }, testInfo) => {
     const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
-    const projectsResponse = await api.get("/api/design-projects?pageSize=100", { headers });
+    const projectsResponse = await api.get(
+      `/api/design-projects?pageSize=100&search=${scenario.code}`,
+      {
+        headers,
+      },
+    );
     expect(projectsResponse.ok()).toBe(true);
     const project = (await projectsResponse.json()).items.find(
       (item: { projectCode: string }) => item.projectCode === scenario.code,

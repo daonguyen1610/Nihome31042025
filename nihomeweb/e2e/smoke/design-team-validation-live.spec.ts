@@ -7,7 +7,9 @@ test("empty member submission identifies and focuses the required user field", a
   loginInBrowserAs,
 }, testInfo) => {
   const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
-  const response = await api.get("/api/design-projects?pageSize=100", { headers });
+  const response = await api.get("/api/design-projects?pageSize=100&search=DP-SAMPLE-002", {
+    headers,
+  });
   expect(response.ok()).toBe(true);
   const project = (await response.json()).items.find(
     (item: { projectCode: string }) => item.projectCode === "DP-SAMPLE-002",

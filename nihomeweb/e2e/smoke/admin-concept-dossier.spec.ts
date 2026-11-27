@@ -37,16 +37,30 @@ test("Concept dossier preserves context and supports accessible responsive forms
 
   const dossier = page.getByTestId(`concept-dossier-${optionId}`);
   await expect(dossier).toBeVisible();
-  await expect(dossier.getByText("R00")).toBeVisible();
+  await expect(dossier.getByText(/^(Phiên bản|Version) R00$/)).toBeVisible();
+  // With a single version there is nothing to choose, so no selector is shown.
+  await expect(dossier.getByRole("combobox")).toHaveCount(0);
+  // Opening the dossier moves focus to it.
+  const region = page.getByRole("region", { name: /./ }).filter({ has: dossier });
+  await expect(region).toBeFocused();
+  await expect(dossier.locator('input[type="file"]')).toHaveCount(0);
+  const perspective = dossier.getByTestId("concept-item-Perspective");
+  await perspective.getByRole("button", { name: /^(Thêm file|Add file):/ }).click();
   await expect(dossier.locator('input[type="file"]')).toBeVisible();
   await expect(
     dossier.getByRole("button", { name: /Gắn vào phiên bản|Attach to revision/i }),
   ).toBeDisabled();
-  await expect(dossier.getByText(/Chưa gắn tài liệu|No documents attached/i)).toBeVisible();
+  await expect(
+    perspective.getByText(/Chưa có tài liệu hoặc lý do|Document or reason missing/),
+  ).toBeVisible();
   await dossier.getByRole("tab", { name: /Ý kiến khách hàng|Client feedback/i }).click();
   await expect(dossier.getByText(/Chưa có ý kiến khách hàng|No client feedback/i)).toBeVisible();
+  // Each tab shows only its own content.
+  await expect(dossier.getByTestId("concept-item-Perspective")).toBeHidden();
   await expect(dossier.getByLabel(/Tên người góp ý|Client representative name/i)).toHaveCount(0);
   await dossier.getByRole("tab", { name: /Hồ sơ|Documents/i }).click();
+  // The half-filled form is still there after reading the feedback tab.
+  await expect(dossier.locator('input[type="file"]')).toBeVisible();
   await expect(
     dossier.getByRole("button", { name: /Tạo phiên bản sửa đổi|Create revised version/i }),
   ).toHaveCount(0);
@@ -61,6 +75,8 @@ test("Concept dossier preserves context and supports accessible responsive forms
     if (width === 768) expect(panelWidth).toBeGreaterThan(600);
     if (width === 1440) expect(panelWidth).toBeGreaterThan(900);
     await expect(dossier).toBeVisible();
+    if (!(await dossier.locator('input[type="file"]').count()))
+      await perspective.getByRole("button", { name: /^(Thêm file|Add file):/ }).click();
     await expect(dossier.locator('input[type="file"]')).toBeVisible();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
