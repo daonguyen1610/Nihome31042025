@@ -68,6 +68,8 @@ test("person picker identifies roles, filters departments and preserves selectio
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.goto("/admin/design-projects");
+  // The people filters sit behind the list's Filters button.
+  await page.getByRole("button", { name: /^Filters/ }).click();
   const manager = page
     .locator("label")
     .filter({ hasText: /^Design manager$/ })

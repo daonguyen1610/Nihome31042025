@@ -188,11 +188,12 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
       .click({ force: true });
     const teamTab = page.getByTestId("design-project-team-tab");
     await expect(teamTab).toBeVisible();
+    // A design team lists only its own members, so the operational Project Manager is not repeated here.
     await expect(
-      teamTab.getByText(/^(Quản lý dự án|Project manager|项目经理|プロジェクトマネージャー)/),
-    ).toHaveCount(2);
-    await expect(
-      teamTab.getByText(/^(Chủ nhiệm thiết kế|Design manager|设计经理|デザインマネージャー)/),
+      // The phone layout is also in the DOM, so count what is on screen.
+      teamTab
+        .getByText(/^(Chủ nhiệm thiết kế|Design manager|设计经理|デザインマネージャー)/)
+        .filter({ visible: true }),
     ).toHaveCount(2);
     const documentsTab = page
       .locator('button[role="tab"]')
@@ -203,13 +204,8 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     await expect(page.getByTestId("design-project-documents-tab")).toBeVisible();
     await expect(page.getByText(/NIH-114\.\.118/)).toHaveCount(0);
 
-    // ---------- 5. Click the "Unlock Detail Design" button ----------
-    await basicTab.click({ force: true });
-    const unlockBtn = page.getByRole("button", {
-      name: /Mở khoá Thiết kế chi tiết|Unlock Detail Design|解锁详细设计|詳細設計を解放/i,
-    });
-    await expect(unlockBtn).toBeEnabled();
-    await unlockBtn.click({ force: true });
+    // ---------- 5. No manual unlock is left to click ----------
+    // Client approval of the Basic Design review already moved the dossier to Detail Design.
 
     // ---------- 6. Verify the stage flipped via the API ----------
     // The header badge sometimes takes a beat to refetch through the

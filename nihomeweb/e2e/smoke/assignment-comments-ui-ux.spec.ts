@@ -108,8 +108,6 @@ test("assignment comment failures are localized and deletion can be cancelled", 
     await page.screenshot({ path: "test-results/assignment-comments-mobile.png", fullPage: true });
   } finally {
     await page.context().setOffline(false);
-    if (designProjectId)
-      await hardDeleteBusinessRoot(api, headers, `/api/design-projects/${designProjectId}`);
     if (projectId)
       await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);
     await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);

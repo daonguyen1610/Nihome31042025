@@ -106,8 +106,6 @@ test("design assignment keeps one subtask level and accepts attachments", async 
       (await listed.json()).map((item: { originalFileName: string }) => item.originalFileName),
     ).toEqual(["spec-a.pdf", "spec-b.pdf"]);
   } finally {
-    if (designProjectId)
-      await hardDeleteBusinessRoot(api, headers, `/api/design-projects/${designProjectId}`);
     if (operationalProjectId)
       await hardDeleteBusinessRoot(
         api,

@@ -291,13 +291,6 @@ test("Sales starts Concept from Opportunity before a contract", async ({
   await expect(page.getByTestId("opportunity-open-design-project")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
-  const superAdminToken = await loginAs(TEST_USERS.superAdmin);
-  const superAdminHeaders = { Authorization: `Bearer ${superAdminToken}` };
-  await hardDeleteBusinessRoot(
-    api,
-    superAdminHeaders,
-    `/api/design-projects/${result.designProject.id}`,
-  );
   const managerHeaders = { Authorization: `Bearer ${token}` };
   await hardDeleteBusinessRoot(api, managerHeaders, `/api/opportunities/${opportunityId}`);
   await hardDeleteBusinessRoot(api, managerHeaders, `/api/operational-projects/${projectId}`);
@@ -370,12 +363,6 @@ test("Sales can create the missing operational project and return to the design 
   await page.getByRole("button", { name: /^(Sửa|Edit)$/i }).click();
   await expect(page.getByRole("dialog").getByTestId("operational-project-code")).toHaveCount(0);
   const managerHeaders = { Authorization: `Bearer ${token}` };
-  const superAdminToken = await loginAs(TEST_USERS.superAdmin);
-  await hardDeleteBusinessRoot(
-    api,
-    { Authorization: `Bearer ${superAdminToken}` },
-    `/api/design-projects/${design.designProject.id}`,
-  );
   await hardDeleteBusinessRoot(api, managerHeaders, `/api/opportunities/${opportunityId}`);
   await hardDeleteBusinessRoot(
     api,
