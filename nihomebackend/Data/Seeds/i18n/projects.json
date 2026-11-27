@@ -342,5 +342,61 @@
     "en": "Projects shaping the future.",
     "zh": "塑造未来的工程。",
     "ja": "未来を形作るプロジェクト。"
+  },
+  {
+    "key": "proj.placeholder.name",
+    "category": "proj",
+    "vi": "Ví dụ: Nhà máy ABC",
+    "en": "Example: ABC factory",
+    "zh": "例如：ABC工厂",
+    "ja": "例: ABC工場"
+  },
+  {
+    "key": "proj.placeholder.client",
+    "category": "proj",
+    "vi": "Tên chủ đầu tư",
+    "en": "Client name",
+    "zh": "业主名称",
+    "ja": "発注者名"
+  },
+  {
+    "key": "proj.placeholder.location",
+    "category": "proj",
+    "vi": "Tỉnh / thành phố",
+    "en": "Province / city",
+    "zh": "省 / 市",
+    "ja": "都道府県 / 市"
+  },
+  {
+    "key": "proj.placeholder.scope",
+    "category": "proj",
+    "vi": "Thiết kế, thi công, hoàn thiện...",
+    "en": "Design, construction, fit-out...",
+    "zh": "设计、施工、装修……",
+    "ja": "設計、施工、内装仕上げ…"
+  },
+  {
+    "key": "proj.placeholder.description",
+    "category": "proj",
+    "vi": "Mô tả tổng quan về dự án...",
+    "en": "Overview of the project...",
+    "zh": "项目概况……",
+    "ja": "プロジェクトの概要…"
+  },
+  {
+    "key": "proj.placeholder.challenge",
+    "category": "proj",
+    "vi": "Thêm thách thức...",
+    "en": "Add a challenge...",
+    "zh": "添加挑战……",
+    "ja": "課題を追加…"
+  },
+  {
+    "key": "proj.placeholder.solution",
+    "category": "proj",
+    "vi": "Thêm giải pháp...",
+    "en": "Add a solution...",
+    "zh": "添加解决方案……",
+    "ja": "解決策を追加…"
   }
 ]
