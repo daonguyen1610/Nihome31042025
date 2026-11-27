@@ -2359,6 +2359,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.HasIndex(dp => dp.ProjectCode).IsUnique();
             b.Property(dp => dp.Name).HasMaxLength(300).IsRequired();
             b.Property(dp => dp.Note).HasMaxLength(4000);
+            b.Property(dp => dp.ClosedReason).HasMaxLength(1000);
             b.Property(dp => dp.CurrentStage).HasConversion<string>().HasMaxLength(20);
             b.Property(dp => dp.Status).HasConversion<string>().HasMaxLength(20);
 
@@ -2841,6 +2842,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.Property(item => item.Status).HasConversion<string>().HasMaxLength(30).IsRequired();
             b.Property(item => item.Title).HasMaxLength(300).IsRequired();
             b.Property(item => item.InternalSummary).HasMaxLength(4000);
+            b.Property(item => item.InternalReturnReason).HasMaxLength(4000);
             b.Property(item => item.ClientDecisionNote).HasMaxLength(4000);
             b.Property(item => item.ClientAcceptanceSignedBy).HasMaxLength(200);
             b.Property(item => item.RowVersion).IsRowVersion();
@@ -3113,6 +3115,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         {
             b.ToTable("concept_revisions");
             b.HasKey(item => item.Id);
+            b.Property(item => item.ReasonCode).HasMaxLength(60);
             b.HasOne(item => item.ConceptOption).WithMany()
                 .HasForeignKey(item => item.ConceptOptionId).OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(item => new { item.ConceptOptionId, item.Number }).IsUnique();

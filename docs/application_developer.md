@@ -830,7 +830,7 @@ poll kết quả an toàn; operation chỉ chứng minh root đã xoá khi ở `
 
 | Root | Xoá cùng root | Gỡ liên kết, giữ lại | Chặn xoá |
 |---|---|---|---|
-| Design Project / Operational Project | Dữ liệu sở hữu (gói công việc, cảnh báo vật tư, lịch thiết kế, link bản vẽ của task...) | CRM độc lập (Opportunity, Quote, Contract) cùng file local/Drive của chúng; chỉ metadata đồng bộ gắn dự án bị xoá | Mọi file phụ thuộc còn lại (local hoặc Drive), có link tới trang chi tiết nguồn; RFQ |
+| Operational Project | Dữ liệu sở hữu (gói công việc, cảnh báo vật tư, lịch thiết kế, link bản vẽ của task...) | CRM độc lập (Opportunity, Quote, Contract) cùng file local/Drive của chúng; chỉ metadata đồng bộ gắn dự án bị xoá | Mọi file phụ thuộc còn lại (local hoặc Drive), có link tới trang chi tiết nguồn; RFQ |
 | Tender | Upload checklist dưới `/files/tenders` (quarantine + purge) | Tham chiếu tới Capability Document | File checklist ngoài thư viện nằm ngoài `/files/tenders` |
 | Quote | File dưới `/files/quotes`; replica Drive đủ điều kiện | Opportunity tham chiếu | Bất kỳ Contract nào tham chiếu |
 | Opportunity | Activities, translations | Contract, Survey, Lead đã convert, Tender thắng | Quote; continuation opportunity |
@@ -854,8 +854,9 @@ Chi tiết thêm:
   trước thư mục cha; replica đã khôi phục khỏi thùng rác bị từ chối. Thư mục rỗng
   xoá trước root (kiểm lại rỗng khi thực thi). Nội dung không rõ, import, chia sẻ
   hoặc thư mục có file CRM độc lập chặn xoá. Drive lỗi thì root DB còn nguyên tới
-  khi dọn xong. Xoá Design Project giữ thư mục dùng chung của Operational
-  Project; binding Survey chưa migrate giữ hành vi unlink cũ.
+  khi dọn xong. Operation xoá Design Project còn dang dở từ trước (không tạo mới được
+  nữa, xem [12.4](#124-xoá-và-đóng-hồ-sơ-thiết-kế)) vẫn giữ thư mục dùng chung của
+  Operational Project; binding Survey chưa migrate giữ hành vi unlink cũ.
 - Sidecar project-document của Quote, `ContractAttachment`, `ContractAppendix`
   chỉ đủ điều kiện khi là binding CRM chính xác tới đường dẫn đã chuẩn hoá, sở
   hữu NICON ổn định, không conflict/processing lease, và hoặc đã sync đủ metadata
@@ -912,11 +913,11 @@ plan cũ, xung đột row version, blocker, persistence, unlink và trạng thá
 đổi khi bị từ chối. Browser test chỉ cho render dialog, gõ xác nhận, hiển thị
 blocker và làm mới UI.
 
-Đã dùng luồng durable và dialog polling: Design Project, Operational Project,
+Đã dùng luồng durable và dialog polling: Operational Project,
 Lead, Customer, Tender, Quote, Opportunity, Contract, Survey, Vendor, Capability
 Document. Các trang root khác phải được chuyển riêng trước khi coi hard delete
 toàn repo hoàn tất. Quy tắc riêng cho hồ sơ thiết kế ở
-[12.4](#124-xoá-hồ-sơ-thiết-kế), cho bản ghi con thi công ở
+[12.4](#124-xoá-và-đóng-hồ-sơ-thiết-kế), cho bản ghi con thi công ở
 [13.1](#131-bố-cục-workspace-thi-công-frontend).
 
 ---
@@ -2165,8 +2166,7 @@ nhất một task và trọng số task tổng 100, `P_phase = Σ(w_i·p_i)/100`
 `departmentCode`, `status`, `plannedFrom`, `plannedTo` theo giao khoảng, `overdueOnly`,
 `page`, `pageSize`) chỉ áp cho list; rollup luôn dùng toàn lịch.
 
-Mỗi thao tác ghi tạo audit và snapshot lịch sử. Xoá Design Project báo giai đoạn, task,
-phụ thuộc, lịch sử trong impact plan. Migration `AddDetailDesignSchedule` chỉ thêm bảng.
+Mỗi thao tác ghi tạo audit và snapshot lịch sử. Migration `AddDetailDesignSchedule` chỉ thêm bảng.
 `AddDesignApprovalWorkflow`: trước khi áp cho môi trường đã có task, mỗi Design Project
 cần Design Lead hoặc Design Manager đang hoạt động, là thành viên dự án và khác từng
 assignee; migration dừng thay vì bịa người duyệt; rollback xoá dữ liệu duyệt/CC.
@@ -2191,6 +2191,12 @@ chỉnh); việc được giao từng review vẫn quyết định quyền truy 
 - `POST .../{reviewId}/comments` nhận `projectDocumentId` tuỳ chọn (phải thuộc tài
   liệu đã trình của review đó); null là bình luận cấp hồ sơ
   (`LinkDesignReviewCommentsToDocuments`).
+- Trả lại nội bộ (Góp ý lập trình v2, mục 7: đã trình nội bộ nhưng không đạt thì trả
+  lại rồi sửa thành Rev mới). `POST .../{reviewId}/return-internal` với `reason` (bắt
+  buộc) và row version; chỉ nhận review `InternalReview` hoặc `ReadyForClient`, do người
+  quản lý review thực hiện. Review chuyển `ReturnedInternally`, giữ nguyên bình luận;
+  option Concept đang chờ duyệt về `Drafting`; revision đã trình vẫn đóng băng. Người
+  nhận được thông báo `design-review.internal-returned`.
 - Design Manager tổng hợp ý kiến, ghi trình khách và quyết định của khách. Chốt
   Concept, mở Basic sang Shop và phát hành IFC cần review khớp gần nhất ở
   `ClientApproved`.
@@ -2208,7 +2214,14 @@ chỉnh); việc được giao từng review vẫn quyết định quyền truy 
   (1–1.000 ký tự), giữ nguyên văn bình luận; trả lời cần `outcome` (1–2.000). Cả hai bất
   biến; dữ liệu cũ để null (`AddConceptFeedbackEvidence`, rollback bị chặn khi đã có
   giá trị).
-- Revision thay thế đi sau quyết định yêu cầu sửa hoặc từ chối. `ClientApproved` cần
+- Revision thay thế đi sau khi hồ sơ bị trả lại nội bộ, hoặc khách yêu cầu sửa hay từ
+  chối. Từ R01, body `reasonCode` bắt buộc và phải là mã đang hoạt động của master data
+  `drawing_revision_reason` (PRD v2, M2: bắt buộc chọn lý do Rev; có `client-request`,
+  `authority-request`, `internal-error`). R00 và dữ liệu cũ để null.
+- Response của revision mới nhất chưa đóng băng có `readiness` (mục còn thiếu, thiếu
+  phối cảnh/mô hình 3D, số file đang chờ và đang lỗi đồng bộ, ý kiến cũ chưa phản hồi),
+  tính bằng chính hàm mà bước trình dùng; `requiredKinds` là danh sách mục bắt buộc. Web
+  không chép lại quy tắc này. `ClientApproved` cần
   Project Document TK-M03 đã ký và sync, người ký, ngày ký; chốt kiểm bằng chứng đó trên
   revision mới nhất. Filtered unique index cho phép một option được chốt mỗi Design
   Project; trạng thái option là concurrency token. `AddConceptDossierRevisions` backfill
@@ -2223,7 +2236,17 @@ chỉnh); việc được giao từng review vẫn quyết định quyền truy 
   database `NiconConceptTest_<guid>` riêng. Spec browser Concept dùng
   `E2E_BACKEND_CONTAINER` (mặc định `nihome31042025-backend`) và `E2E_SQL_CONTAINER`.
 
-### 12.4 Xoá hồ sơ thiết kế
+### 12.4 Xoá và đóng hồ sơ thiết kế
+
+**Bộ hồ sơ thiết kế không xoá được** (Góp ý lập trình v2, mục 7 và N-03). Hồ sơ không
+tiếp tục (khách dừng, trượt thầu) được đóng bằng `POST /api/design-projects/{id}/close`
+với `reason` (bắt buộc, tối đa 1.000 ký tự), quyền `design.projects.close`. Mặc định cấp
+cho `DESIGN_LEAD` (vai trò trưởng bộ phận theo PRD v2, mục 4) và quản trị viên;
+`DESIGN_MANAGER` không có. Đây là ngoại lệ duy nhất của quy tắc `DESIGN_MANAGER` bao gồm
+mọi quyền của `DESIGN_LEAD`. Hồ sơ đóng có `Status=Cancelled`, lưu lý do, người và thời
+điểm đóng; chỉ xem được với mọi người kể cả quản trị viên, không mở lại. Form sửa không
+đặt được `Cancelled`. Phạm vi này chưa gồm các nút xoá khác trong N-03 (báo giá, cơ hội,
+dự án) và xoá bản ghi con bên dưới. Xoá vĩnh viễn Operational Project vẫn theo mục 7.
 
 Concept, Basic Design, Shop Drawing và IFC dùng `GET /api/<resource>/{id}/deletion-impact`
 rồi `DELETE` với `ConfirmDeletionRequest`. Chỉ Concept `Discarded`, Basic/Shop

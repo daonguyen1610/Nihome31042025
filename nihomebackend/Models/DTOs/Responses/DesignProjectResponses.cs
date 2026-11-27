@@ -29,6 +29,8 @@ public class DesignProjectResponse
     public string CurrentStage { get; set; } = string.Empty;
     /// <summary>Enum name — Active / OnHold / Completed / Cancelled.</summary>
     public string Status { get; set; } = string.Empty;
+    public string? ClosedReason { get; set; }
+    public DateTime? ClosedAt { get; set; }
 
     public string? Note { get; set; }
 

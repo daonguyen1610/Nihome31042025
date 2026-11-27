@@ -16,6 +16,8 @@ public enum DesignReviewStatus
     ClientChangesRequested = 4,
     ClientApproved = 5,
     Rejected = 6,
+    /// <summary>Failed the internal round: the dossier goes back and the fix is a new revision.</summary>
+    ReturnedInternally = 7,
 }
 
 public class DesignReview : IConcurrencyTracked
@@ -37,6 +39,9 @@ public class DesignReview : IConcurrencyTracked
     public ApplicationUser DesignManager { get; set; } = null!;
     public string? InternalSummary { get; set; }
     public DateTime? InternalSubmittedAt { get; set; }
+    public string? InternalReturnReason { get; set; }
+    public DateTime? InternalReturnedAt { get; set; }
+    public int? InternalReturnedByUserId { get; set; }
     public DateTime? ClientSubmittedAt { get; set; }
     public string? ClientDecisionNote { get; set; }
     public DateTime? ClientDecidedAt { get; set; }

@@ -48,6 +48,8 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
 };
 
 interface Props {
+  /** A closed design dossier keeps its history but takes no new revision. */
+  readOnly?: boolean;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   designProjectId: number;
@@ -75,12 +77,13 @@ export const RevisionsPanel = ({
   targetId,
   targetCode,
   targetTitle,
+  readOnly = false,
 }: Props) => {
   const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
-  const canManage = has(ADMIN_PERMS.designRevisionsManage);
+  const canManage = !readOnly && has(ADMIN_PERMS.designRevisionsManage);
 
   const [rows, setRows] = useState<DrawingRevisionResponse[]>([]);
   const [loading, setLoading] = useState(true);

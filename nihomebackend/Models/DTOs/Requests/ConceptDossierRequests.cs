@@ -2,6 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace NihomeBackend.Models.DTOs.Requests;
 
+public sealed class CreateConceptRevisionRequest
+{
+    [Required, MaxLength(60)] public string ReasonCode { get; set; } = string.Empty;
+}
+
 public sealed class AddConceptArtifactRequest
 {
     [Range(1, long.MaxValue)] public long ProjectDocumentId { get; set; }

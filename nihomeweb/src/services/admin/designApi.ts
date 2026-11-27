@@ -108,10 +108,8 @@ export const designApi = {
     api.post<DesignProjectResponse>("/design-projects", body),
   updateDesignProject: (id: number, body: UpdateDesignProjectRequest) =>
     api.put<DesignProjectResponse>(`/design-projects/${id}`, body),
-  getDesignProjectDeletionImpact: (id: number) =>
-    api.get<DeletionImpactResponse>(`/design-projects/${id}/deletion-impact`),
-  deleteDesignProject: (id: number, body: ConfirmDeletionRequest) =>
-    api.delete<HardDeleteOperationResult | null>(`/design-projects/${id}`, { data: body }),
+  closeDesignProject: (id: number, reason: string) =>
+    api.post<DesignProjectResponse>(`/design-projects/${id}/close`, { reason }),
   getDesignSchedule: (projectId: number, params: DesignScheduleQuery = {}) =>
     api.get<DesignScheduleResponse>(`/operational-projects/${projectId}/design-schedule`, {
       params,
@@ -293,6 +291,18 @@ export const designApi = {
       { body, projectDocumentId },
       withIdempotencyKey(key),
     ),
+  returnDesignReview: (
+    projectId: number,
+    reviewId: number,
+    reason: string,
+    rowVersion: string,
+    key: string,
+  ) =>
+    api.post<DesignReviewResponse>(
+      `/design-projects/${projectId}/reviews/${reviewId}/return-internal`,
+      { reason, rowVersion },
+      { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } },
+    ),
   consolidateDesignReview: (
     projectId: number,
     reviewId: number,
@@ -394,10 +404,10 @@ export const designApi = {
     api.post<ConceptOptionResponse>(`/concept-options/${id}/status`, body),
   listConceptRevisions: (id: number) =>
     api.get<ConceptRevisionResponse[]>(`/concept-options/${id}/revisions`),
-  createConceptRevision: (id: number) =>
+  createConceptRevision: (id: number, reasonCode: string) =>
     api.post<ConceptRevisionResponse>(
       `/concept-options/${id}/revisions`,
-      {},
+      { reasonCode },
       withIdempotencyKey(newIdempotencyKey()),
     ),
   addConceptArtifact: (

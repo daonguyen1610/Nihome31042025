@@ -35,6 +35,8 @@ export interface DesignProjectResponse {
   deadline?: string | null;
   currentStage: DesignProjectStage;
   status: DesignProjectStatus;
+  closedReason?: string | null;
+  closedAt?: string | null;
   note?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -304,7 +306,8 @@ export type DesignReviewStatus =
   | "SubmittedToClient"
   | "ClientChangesRequested"
   | "ClientApproved"
-  | "Rejected";
+  | "Rejected"
+  | "ReturnedInternally";
 
 export interface DesignReviewResponse {
   id: number;
@@ -322,6 +325,8 @@ export interface DesignReviewResponse {
   designManagerName?: string | null;
   internalSummary?: string | null;
   internalSubmittedAt?: string | null;
+  internalReturnReason?: string | null;
+  internalReturnedAt?: string | null;
   clientSubmittedAt?: string | null;
   clientDecisionNote?: string | null;
   clientDecidedAt?: string | null;

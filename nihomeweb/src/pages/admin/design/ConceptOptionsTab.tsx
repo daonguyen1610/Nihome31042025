@@ -127,6 +127,24 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const dossierRef = useRef<HTMLDivElement>(null);
+  const dossierTrigger = useRef<HTMLButtonElement | null>(null);
+  // The dossier opens below the grid, often off screen: bring it into view and move focus there.
+  useEffect(() => {
+    const panel = dossierRef.current;
+    if (expandedId === null || !panel) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    panel.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    panel.focus({ preventScroll: true });
+  }, [expandedId]);
+  const openDossier = (id: number, trigger: HTMLButtonElement) => {
+    dossierTrigger.current = trigger;
+    setExpandedId(id);
+  };
+  const closeDossier = () => {
+    setExpandedId(null);
+    dossierTrigger.current?.focus();
+  };
   const [reviews, setReviews] = useState<DesignReviewResponse[]>([]);
   const confirmationTrigger = useRef<HTMLButtonElement | null>(null);
   const restoreConfirmationFocus = (event: Event) => {
@@ -415,6 +433,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
                 "min-w-0 rounded-lg border bg-card p-4 shadow-sm",
                 row.status === "Finalized" && "border-success/40 ring-1 ring-emerald-200",
                 row.status === "Discarded" && "border-border bg-muted/40",
+                expandedId === row.id && "border-primary ring-1 ring-primary",
               )}
             >
               <header className="flex items-start justify-between gap-2">
@@ -491,7 +510,11 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
                   className="mt-3 min-h-11"
                   aria-expanded={expandedId === row.id}
                   aria-controls={`concept-dossier-${row.id}`}
-                  onClick={() => setExpandedId(expandedId === row.id ? null : row.id)}
+                  onClick={(event) =>
+                    expandedId === row.id
+                      ? setExpandedId(null)
+                      : openDossier(row.id, event.currentTarget)
+                  }
                 >
                   {t("concepts.dossier.open")}
                   {expandedId === row.id ? (
@@ -507,13 +530,21 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
       ) : null}
 
       {expandedRow && project.operationalProjectId ? (
-        <div className="min-w-0 rounded-lg border bg-card p-4 sm:p-6">
+        <div
+          ref={dossierRef}
+          tabIndex={-1}
+          role="region"
+          aria-labelledby="concept-dossier-title"
+          className="min-h-[75vh] min-w-0 scroll-mt-20 rounded-lg border bg-card p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-6"
+        >
           <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-4">
             <div>
-              <h3 className="text-base font-semibold">{expandedRow.name}</h3>
+              <h3 id="concept-dossier-title" className="text-base font-semibold">
+                {expandedRow.name}
+              </h3>
               <p className="text-sm text-muted-foreground">{t("concepts.dossier.open")}</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setExpandedId(null)}>
+            <Button variant="outline" size="sm" className="min-h-11" onClick={closeDossier}>
               {t("common.close")}
             </Button>
           </div>
@@ -526,6 +557,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
               isLocked || expandedRow.status === "Finalized" || expandedRow.status === "Discarded"
             }
             onChanged={refreshRows}
+            onOpenReviews={onOpenReviews}
           />
         </div>
       ) : null}
@@ -758,7 +790,7 @@ const RowActions = ({
         </>
       )}
       {s === "ClientRequestedChanges" && (
-        <span className="text-xs text-warning-strong">{t("concepts.dossier.newRevision")}</span>
+        <p className="w-full text-sm text-warning-strong">{t("concepts.dossier.reviseHint")}</p>
       )}
       {s === "Finalized" && (
         <Badge variant="outline" className="border-success/30 bg-success-soft text-success-strong">

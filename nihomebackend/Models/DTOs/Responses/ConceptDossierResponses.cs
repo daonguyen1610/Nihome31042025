@@ -8,9 +8,23 @@ public sealed class ConceptRevisionResponse
     public DateTime CreatedAt { get; set; }
     public DateTime? FrozenAt { get; set; }
     public bool CanCreateRevision { get; set; }
+    public string? ReasonCode { get; set; }
+    /// <summary>Items that need a file or a recorded exception before submission.</summary>
+    public List<string> RequiredKinds { get; set; } = new();
+    /// <summary>What still blocks the internal submission. Only set for the latest unsubmitted version.</summary>
+    public ConceptReadinessResponse? Readiness { get; set; }
     public List<ConceptArtifactResponse> Artifacts { get; set; } = new();
     public List<ConceptChecklistWaiverResponse> Waivers { get; set; } = new();
     public List<ConceptFeedbackResponse> Feedback { get; set; } = new();
+}
+
+public sealed class ConceptReadinessResponse
+{
+    public List<string> MissingKinds { get; set; } = new();
+    public bool NeedsVisual { get; set; }
+    public int FilesWaiting { get; set; }
+    public int FilesBlocked { get; set; }
+    public bool HasUnansweredEarlierFeedback { get; set; }
 }
 
 public sealed class ConceptArtifactResponse

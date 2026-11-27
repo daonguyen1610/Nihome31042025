@@ -154,47 +154,41 @@ public class DesignProjectsController(
         }
     }
 
-    [HttpDelete("{id:int}")]
-    [RequirePermission("design.projects", "view")]
-    public async Task<IActionResult> Delete(
-        int id,
-        [FromBody] ConfirmDeletionRequest request,
-        CancellationToken ct)
+    [HttpPost("{id:int}/close")]
+    [RequirePermission("design.projects", "close")]
+    public async Task<ActionResult<DesignProjectResponse>> Close(
+        int id, [FromBody] CloseDesignProjectRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await projectAccess.HasDesignProjectPermissionAsync(userId.Value, id, DesignProjectAction.Delete, ct)) return NotFound();
+        if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, id, ct)) return NotFound();
         try
         {
-            var result = await svc.DeleteAsync(id, request, userId.Value, ct);
-            if (result is null) return NotFound();
-            return result.IsComplete ? NoContent() : AcceptedOperation(result);
+            var response = await svc.CloseAsync(id, request.Reason, userId.Value, ct);
+            if (response is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "design-project.close",
+                ResourceType = EntityTypes.DesignProject,
+                ResourceId = id.ToString(),
+                Message = $"Design project #{id} closed.",
+                NewValue = response,
+            });
+            return Ok(response);
         }
         catch (DesignProjectOperationException ex)
         {
+            audit.Log(new AuditEvent
+            {
+                Action = "design-project.close",
+                ResourceType = EntityTypes.DesignProject,
+                ResourceId = id.ToString(),
+                Message = ex.Message,
+                Status = AuditStatus.Failure,
+                FailureReason = ex.Message,
+            });
             return BadRequest(new { message = ex.Message });
         }
-        catch (DeletionPlanChangedException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
-        catch (HardDeleteOperationConflictException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
-    }
-
-    [HttpGet("{id:int}/deletion-impact")]
-    [RequirePermission("design.projects", "view")]
-    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(
-        int id,
-        CancellationToken ct)
-    {
-        var userId = GetUserId();
-        if (userId is null) return Unauthorized();
-        if (!await projectAccess.HasDesignProjectPermissionAsync(userId.Value, id, DesignProjectAction.Delete, ct)) return NotFound();
-        var impact = await svc.GetDeletionImpactAsync(id, ct);
-        return impact is null ? NotFound() : Ok(impact);
     }
 
     private int? GetUserId()

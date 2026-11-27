@@ -46,7 +46,9 @@ public sealed class MyWorkService(AppDbContext db)
         {
             workTasks = workTasks.Where(task =>
                 task.Status == WorkTaskStatus.Planned || task.Status == WorkTaskStatus.InProgress);
-            designTasks = designTasks.Where(task => task.Status != DesignScheduleStatus.Completed);
+            // Nobody can act on a closed dossier, so its unfinished tasks leave the to-do list.
+            designTasks = designTasks.Where(task => task.Status != DesignScheduleStatus.Completed &&
+                task.DesignProject.Status != DesignProjectStatus.Cancelled);
         }
 
         var items = new List<MyWorkItemResponse>();

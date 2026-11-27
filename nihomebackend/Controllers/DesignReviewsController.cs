@@ -136,6 +136,26 @@ public sealed class DesignReviewsController(
         catch (DesignReviewOperationException exception) { return BadRequest(new { message = exception.Message }); }
     }
 
+    [HttpPost("{reviewId:int}/return-internal")]
+    [RequirePermission("design.projects", "view")]
+    [Idempotency("design.reviews.return-internal", requireKey: true)]
+    public async Task<ActionResult<DesignReviewResponse>> ReturnInternally(
+        int projectId, int reviewId, [FromBody] ReturnDesignReviewRequest request, CancellationToken ct)
+    {
+        var userId = UserId();
+        if (userId is null) return Unauthorized();
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        try
+        {
+            var result = await service.ReturnInternallyAsync(projectId, reviewId, request, userId.Value, ct);
+            if (result is null) return NotFound();
+            Log("design-review.return-internal", result);
+            CrmConcurrency.SetResponseEntityTag(Response, result.RowVersion);
+            return Ok(result);
+        }
+        catch (DesignReviewOperationException exception) { return BadRequest(new { message = exception.Message }); }
+    }
+
     [HttpPost("{reviewId:int}/submit-client")]
     [RequirePermission("design.projects", "view")]
     [Idempotency("design.reviews.submit-client", requireKey: true)]

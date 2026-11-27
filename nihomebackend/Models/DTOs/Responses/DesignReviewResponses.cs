@@ -17,6 +17,8 @@ public sealed class DesignReviewResponse
     public string? DesignManagerName { get; set; }
     public string? InternalSummary { get; set; }
     public DateTime? InternalSubmittedAt { get; set; }
+    public string? InternalReturnReason { get; set; }
+    public DateTime? InternalReturnedAt { get; set; }
     public DateTime? ClientSubmittedAt { get; set; }
     public string? ClientDecisionNote { get; set; }
     public DateTime? ClientDecidedAt { get; set; }

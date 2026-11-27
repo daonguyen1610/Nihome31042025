@@ -2,7 +2,7 @@ import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, PenTool } from "lucide-react";
+import { ArrowLeft, PenTool, Check } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -261,29 +261,55 @@ const AdminDesignProjectDetail = () => {
 
           {/* 3-stage progress strip */}
           <div className="mt-4">
-            <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
+            <p className="mb-2 text-sm font-medium text-muted-foreground">
               {t("designProjects.detail.progress")}
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <ol className="grid grid-cols-3 gap-2">
               {STAGE_ORDER.slice(0, 3).map((s, i) => {
-                const active = i <= stageIndex;
+                const done = i < stageIndex;
+                const current = i === stageIndex;
                 return (
-                  <div
+                  <li
                     key={s}
+                    aria-current={current ? "step" : undefined}
                     className={cn(
-                      "rounded-md border px-2 py-1.5 text-center text-xs font-medium",
-                      active
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-border bg-muted/30 text-muted-foreground",
+                      "flex items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-center text-xs font-medium",
+                      current
+                        ? "border-primary bg-primary/10 text-primary"
+                        : done
+                          ? "border-success/40 bg-success-soft text-success-strong"
+                          : "border-border bg-muted/30 text-muted-foreground",
                     )}
                   >
+                    {done ? <Check aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> : null}
                     {t(`designProjects.stage.${s}`)}
-                  </div>
+                    {done ? (
+                      <span className="sr-only">{t("designProjects.detail.stageDone")}</span>
+                    ) : null}
+                  </li>
                 );
               })}
-            </div>
+            </ol>
           </div>
         </header>
+
+        {project.status === "Cancelled" ? (
+          <div
+            role="status"
+            data-testid="design-project-closed"
+            className="rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm text-warning-strong"
+          >
+            <p className="font-medium">
+              {t("designProjects.close.banner")}
+              {project.closedAt ? ` (${formatDate(project.closedAt, lang)})` : ""}
+            </p>
+            {project.closedReason ? (
+              <p className="mt-1 whitespace-pre-wrap break-words">
+                {t("designProjects.close.reason")}: {project.closedReason}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <Tabs value={initialTab} onValueChange={selectTab}>
           <ScrollableTabsList
@@ -304,7 +330,9 @@ const AdminDesignProjectDetail = () => {
           </ScrollableTabsList>
 
           <TabsContent value="overview" className="space-y-4">
-            <DesignNextStepPanel project={project} onOpenTab={selectTab} />
+            {project.status !== "Cancelled" ? (
+              <DesignNextStepPanel project={project} onOpenTab={selectTab} />
+            ) : null}
             <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
               <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {infoRows.map((r) => (

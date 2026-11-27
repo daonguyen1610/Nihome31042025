@@ -1590,5 +1590,13 @@
     "en": "Other sectors",
     "zh": "其他领域",
     "ja": "その他の分野"
+  },
+  {
+    "key": "masterData.drawing_revision_reason.internal-error.label",
+    "category": "masterData",
+    "vi": "Lỗi nội bộ",
+    "en": "Internal error",
+    "zh": "内部错误",
+    "ja": "社内の誤り"
   }
 ]

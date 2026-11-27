@@ -241,6 +241,12 @@
       "adminDescription": "Notify designated internal recipients when a design dossier is circulated for comments."
     },
     {
+      "code": "design-review.internal-returned",
+      "module": "design.reviews",
+      "channel": "InApp",
+      "adminDescription": "Notify internal recipients when the Design Manager returns a dossier after the internal round."
+    },
+    {
       "code": "design-review.client-decision",
       "module": "design.reviews",
       "channel": "InApp",

@@ -457,10 +457,8 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
             .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task AssignmentFiles_AggregateDeleteRejectsStalePlanAndCleansStorage(bool designScope)
+    [Fact]
+    public async Task AssignmentFiles_AggregateDeleteRejectsStalePlanAndCleansStorage()
     {
         await AuthenticateAsync("SUPER_ADMIN");
         var projectId = await CreateProjectAsync();
@@ -472,30 +470,13 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
             AssignmentPayload("NICON-FILE-CLEANUP", memberId), $"file-cleanup-{Guid.NewGuid():N}");
         created.StatusCode.Should().Be(HttpStatusCode.Created);
         var assignmentId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
-        var designId = designScope ? await WithDbAsync(async db =>
-        {
-            var project = await db.OperationalProjects.FindAsync(projectId);
-            var design = new DesignProject
-            {
-                OperationalProjectId = projectId,
-                CustomerId = project!.CustomerId,
-                ProjectCode = $"DP-FILES-{Guid.NewGuid():N}"[..30],
-                Name = "NICON – Hồ sơ thiết kế nhà xưởng",
-            };
-            db.DesignProjects.Add(design);
-            await db.SaveChangesAsync();
-            (await db.OperationalProjectMembers.FindAsync(memberId))!.DesignProjectId = design.Id;
-            await db.SaveChangesAsync();
-            return design.Id;
-        }) : (int?)null;
-        var root = designScope ? $"/api/design-projects/{designId}" : $"/api/operational-projects/{projectId}";
+        var root = $"/api/operational-projects/{projectId}";
         var attachmentPath = $"/api/operational-projects/{projectId}/team/assignments/{assignmentId}/attachments";
-        var suffix = designId.HasValue ? $"?designProjectId={designId}" : "";
         var stale = await ReadJsonAsync(await Client.GetAsync($"{root}/deletion-impact"));
         using var form = new MultipartFormDataContent();
         form.Add(new ByteArrayContent("NICON design evidence"u8.ToArray())
         { Headers = { ContentType = new MediaTypeHeaderValue("application/pdf") } }, "file", "ban-ve.pdf");
-        using var uploadRequest = new HttpRequestMessage(HttpMethod.Post, attachmentPath + suffix) { Content = form };
+        using var uploadRequest = new HttpRequestMessage(HttpMethod.Post, attachmentPath) { Content = form };
         uploadRequest.Headers.Add("Idempotency-Key", $"upload-{Guid.NewGuid():N}");
         using var uploaded = await Client.SendAsync(uploadRequest);
         uploaded.StatusCode.Should().Be(HttpStatusCode.Created, await uploaded.Content.ReadAsStringAsync());
@@ -519,7 +500,7 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
                 }),
             });
             rejected.StatusCode.Should().Be(HttpStatusCode.Conflict);
-            (await Client.GetAsync($"{attachmentPath}/{attachmentId}/content{suffix}"))
+            (await Client.GetAsync($"{attachmentPath}/{attachmentId}/content"))
                 .StatusCode.Should().Be(HttpStatusCode.OK);
             File.Exists(physicalPath).Should().BeTrue();
             var freshImpact = await ReadJsonAsync(await Client.GetAsync($"{root}/deletion-impact"));
@@ -536,8 +517,6 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
             File.Exists(physicalPath).Should().BeFalse();
             (await WithDbAsync(db => db.OperationalProjectAssignmentAttachments.AnyAsync(item => item.Id == attachmentId)))
                 .Should().BeFalse();
-            if (designScope)
-                (await Client.GetAsync($"/api/operational-projects/{projectId}")).StatusCode.Should().Be(HttpStatusCode.OK);
         }
         finally
         {

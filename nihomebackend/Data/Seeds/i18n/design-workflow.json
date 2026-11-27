@@ -102,5 +102,10 @@
   ,{"key":"designProjects.reviews.done.client","category":"design-projects","vi":"Đã ghi nhận trình khách. Khi khách phản hồi, hãy ghi quyết định của khách.","en":"Recorded as submitted to the client. Record the client's decision when they reply.","zh":"已记录提交客户。客户回复后请记录其决定。","ja":"顧客提出を記録しました。回答があれば顧客の判断を記録してください。"}
   ,{"key":"designProjects.reviews.done.approve","category":"design-projects","vi":"Đã ghi nhận khách duyệt.","en":"Client approval recorded.","zh":"已记录客户批准。","ja":"顧客承認を記録しました。"}
   ,{"key":"designProjects.reviews.done.changes","category":"design-projects","vi":"Đã ghi nhận khách yêu cầu sửa. Hãy tạo revision mới để trình lại.","en":"Change request recorded. Create a new revision to resubmit.","zh":"已记录修改要求。请新建修订版后重新提交。","ja":"修正依頼を記録しました。新しい改訂を作成して再提出してください。"}
-  ,{"key":"designProjects.reviews.done.reject","category":"design-projects","vi":"Đã ghi nhận khách từ chối.","en":"Client rejection recorded.","zh":"已记录客户拒绝。","ja":"顧客却下を記録しました。"}
+  ,{"key":"designProjects.reviews.done.reject","category":"design-projects","vi":"Đã ghi nhận khách từ chối.","en":"Client rejection recorded.","zh":"已记录客户拒绝。","ja":"顧客却下を記録しました。"},
+  {"key":"designProjects.reviews.status.ReturnedInternally","category":"design-projects","vi":"Trả lại nội bộ","en":"Returned internally","zh":"内部退回","ja":"社内差し戻し"},
+  { "key": "designProjects.reviews.returnInternal", "category": "design-projects", "vi": "Trả lại nội bộ", "en": "Return internally", "zh": "内部退回", "ja": "社内差し戻し" },
+  { "key": "designProjects.reviews.returnReason", "category": "design-projects", "vi": "Lý do trả lại", "en": "Reason for returning", "zh": "退回原因", "ja": "差し戻し理由" },
+  { "key": "designProjects.reviews.confirm.return", "category": "design-projects", "vi": "Trả lại hồ sơ \"{title}\"? Hồ sơ này không trình khách được nữa; phần sửa phải làm ở phiên bản mới.", "en": "Return \"{title}\"? It can no longer go to the client; the fix goes into a new version.", "zh": "退回“{title}”？该资料将不能再提交给客户，修改需在新版本中进行。", "ja": "「{title}」を差し戻しますか？この資料はお客様に提出できなくなり、修正は新しい版で行います。" },
+  { "key": "designProjects.reviews.done.return", "category": "design-projects", "vi": "Đã trả lại hồ sơ.", "en": "Dossier returned.", "zh": "资料已退回。", "ja": "資料を差し戻しました。" }
 ]

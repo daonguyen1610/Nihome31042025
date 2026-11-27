@@ -246,7 +246,8 @@
         { "code": "mep-sync",            "name": "Đồng bộ MEP",        "sortOrder": 3 },
         { "code": "material-adjustment", "name": "Điều chỉnh vật liệu","sortOrder": 4 },
         { "code": "other",               "name": "Khác",                "sortOrder": 5 },
-        { "code": "authority-request",   "name": "Cơ quan nhà nước yêu cầu", "sortOrder": 6 }
+        { "code": "authority-request",   "name": "Cơ quan nhà nước yêu cầu", "sortOrder": 6 },
+        { "code": "internal-error",      "name": "Lỗi nội bộ",          "sortOrder": 7 }
       ]
     },
 

@@ -17,9 +17,7 @@ public class DesignProjectService(
     AppDbContext db,
     ILogger<DesignProjectService> logger,
     IProjectAccessService projectAccess,
-    ILegacyProjectTeamSyncService projectTeamSync,
-    IProjectHardDeletePlanService hardDeletePlans,
-    IHardDeleteOperationService hardDeleteOperations) : IDesignProjectService
+    ILegacyProjectTeamSyncService projectTeamSync) : IDesignProjectService
 {
     private const int MaxPageSize = 100;
 
@@ -184,7 +182,8 @@ public class DesignProjectService(
 
         await using var handoffTransaction = await BeginCodeAllocationAsync(DateTime.UtcNow.Year, ct);
         var existing = await db.DesignProjects.AsNoTracking()
-            .Where(project => project.OperationalProjectId == source.OperationalProjectId.Value)
+            .Where(project => project.OperationalProjectId == source.OperationalProjectId.Value &&
+                project.Status != DesignProjectStatus.Cancelled)
             .OrderBy(project => project.Id)
             .Select(project => project.Id)
             .FirstOrDefaultAsync(ct);
@@ -210,7 +209,8 @@ public class DesignProjectService(
             // A concurrent contract handoff may have created a compatible row.
             db.ChangeTracker.Clear();
             existing = await db.DesignProjects.AsNoTracking()
-                .Where(project => project.OperationalProjectId == source.OperationalProjectId.Value)
+                .Where(project => project.OperationalProjectId == source.OperationalProjectId.Value &&
+                    project.Status != DesignProjectStatus.Cancelled)
                 .OrderBy(project => project.Id)
                 .Select(project => project.Id)
                 .FirstOrDefaultAsync(ct);
@@ -225,6 +225,8 @@ public class DesignProjectService(
         await using var updateTransaction = await BeginCodeAllocationAsync(DateTime.UtcNow.Year, ct);
         var entity = await db.DesignProjects.FirstOrDefaultAsync(dp => dp.Id == id, ct);
         if (entity is null) return null;
+        if (entity.Status == DesignProjectStatus.Cancelled)
+            throw new DesignProjectOperationException("Hồ sơ thiết kế đã đóng, chỉ xem được.");
 
         var name = (request.Name ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(name))
@@ -257,6 +259,8 @@ public class DesignProjectService(
             {
                 throw new DesignProjectOperationException($"Trạng thái '{request.Status}' không hợp lệ.");
             }
+            if (status == DesignProjectStatus.Cancelled)
+                throw new DesignProjectOperationException("Để dừng hồ sơ, hãy dùng chức năng Đóng hồ sơ và ghi lý do.");
             entity.Status = status;
         }
 
@@ -279,46 +283,26 @@ public class DesignProjectService(
         return await GetAsync(id, ct);
     }
 
-    public async Task<DeletionImpactResponse?> GetDeletionImpactAsync(
-        int id, CancellationToken ct = default) =>
-        (await hardDeletePlans.ForDesignProjectAsync(id, ct))?.Impact;
-
-    public async Task<HardDeleteOperationResult?> DeleteAsync(
-        int id,
-        ConfirmDeletionRequest request,
-        int callerUserId,
-        CancellationToken ct = default)
+    public async Task<DesignProjectResponse?> CloseAsync(
+        int id, string reason, int callerUserId, CancellationToken ct = default)
     {
-        if (!await db.DesignProjects.AsNoTracking().AnyAsync(dp => dp.Id == id, ct)) return null;
-        var plan = await hardDeletePlans.ForDesignProjectAsync(id, ct);
-        if (plan is null) return null;
-        ValidateDeletionConfirmation(plan.Impact, request);
-        var operation = await hardDeleteOperations.CreateAsync(new CreateHardDeleteOperationRequest(
-            EntityTypes.DesignProject,
-            id.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            plan.Impact.ResourceLabel,
-            plan.Impact.PlanToken,
-            request.Confirmation!,
-            callerUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            plan.Items), ct);
-        var result = await hardDeleteOperations.ProcessAsync(operation.OperationId, ct);
-        logger.LogInformation("DesignProject {Id} durable hard-delete is {Status}", id, result.Status);
-        return result;
-    }
-
-    private static void ValidateDeletionConfirmation(
-        DeletionImpactResponse impact,
-        ConfirmDeletionRequest request)
-    {
-        if (!string.Equals(request.PlanToken?.Trim(), impact.PlanToken, StringComparison.Ordinal))
-            throw new DeletionPlanChangedException(
-                "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
-        if (!impact.CanDelete)
-            throw new DesignProjectOperationException(
-                "Không thể xoá Dự án vì còn dữ liệu cần được dọn an toàn trước.");
-        if (!string.Equals(request.Confirmation, impact.RequiredConfirmation, StringComparison.Ordinal))
-            throw new DesignProjectOperationException(
-                $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{impact.RequiredConfirmation}'.");
+        var entity = await db.DesignProjects.FirstOrDefaultAsync(dp => dp.Id == id, ct);
+        if (entity is null) return null;
+        if (entity.Status is DesignProjectStatus.Cancelled or DesignProjectStatus.Completed)
+            throw new DesignProjectOperationException("Hồ sơ đã đóng hoặc đã hoàn thành.");
+        var trimmed = reason?.Trim() ?? string.Empty;
+        if (trimmed.Length == 0 || trimmed.Length > 1000)
+            throw new DesignProjectOperationException("Phải ghi lý do đóng hồ sơ, tối đa 1000 ký tự.");
+        var now = DateTime.UtcNow;
+        entity.Status = DesignProjectStatus.Cancelled;
+        entity.ClosedReason = trimmed;
+        entity.ClosedAt = now;
+        entity.ClosedByUserId = callerUserId;
+        entity.UpdatedAt = now;
+        entity.UpdatedByUserId = callerUserId;
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("DesignProject {Id} closed by user {UserId}", id, callerUserId);
+        return await GetAsync(id, ct);
     }
 
     public async Task<DesignProjectResponse> EnsureForContractAsync(Contract contract, int? callerUserId, CancellationToken ct = default)
@@ -659,6 +643,8 @@ public class DesignProjectService(
         Deadline = dp.Deadline,
         CurrentStage = dp.CurrentStage.ToString(),
         Status = dp.Status.ToString(),
+        ClosedReason = dp.ClosedReason,
+        ClosedAt = dp.ClosedAt.HasValue ? DateTime.SpecifyKind(dp.ClosedAt.Value, DateTimeKind.Utc) : null,
         Note = dp.Note,
         CreatedAt = dp.CreatedAt,
         UpdatedAt = dp.UpdatedAt,

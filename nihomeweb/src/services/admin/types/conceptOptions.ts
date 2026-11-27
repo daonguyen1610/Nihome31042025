@@ -40,6 +40,17 @@ export interface ConceptRevisionResponse {
   createdAt: string;
   frozenAt?: string | null;
   canCreateRevision: boolean;
+  /** A `drawing_revision_reason` code; null only for R00. */
+  reasonCode?: string | null;
+  requiredKinds: ConceptArtifactKind[];
+  /** What blocks the internal submission; only on the latest unsubmitted version. */
+  readiness?: {
+    missingKinds: ConceptArtifactKind[];
+    needsVisual: boolean;
+    filesWaiting: number;
+    filesBlocked: number;
+    hasUnansweredEarlierFeedback: boolean;
+  } | null;
   artifacts: {
     id: number;
     projectDocumentId: number;
