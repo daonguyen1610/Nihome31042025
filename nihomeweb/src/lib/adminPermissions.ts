@@ -107,6 +107,7 @@ export const ADMIN_PERMS = {
   financeCorrectionsReverse: "finance.corrections.reverse",
   designProjects: "design.projects.view",
   designProjectsManage: "design.projects.manage",
+  designProjectsClose: "design.projects.close",
   designRecordsHardDelete: "design.records.hard-delete",
   permits: "permit.checklists.view",
   permitsManage: "permit.checklists.manage",

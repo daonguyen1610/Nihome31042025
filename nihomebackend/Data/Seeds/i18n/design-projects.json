@@ -43,10 +43,8 @@
   {"key": "designProjects.edit", "category": "designProjects", "vi": "Chỉnh sửa dự án", "en": "Edit design dossier", "zh": "编辑设计档案", "ja": "プロジェクトを編集"},
   {"key": "designProjects.created", "category": "designProjects", "vi": "Đã tạo hồ sơ thiết kế", "en": "Design dossier created", "zh": "已创建设计档案", "ja": "設計図書を作成しました"},
   {"key": "designProjects.updated", "category": "designProjects", "vi": "Đã cập nhật dự án", "en": "Design dossier updated", "zh": "已更新设计档案", "ja": "設計図書を更新しました"},
-  {"key": "designProjects.deleted", "category": "designProjects", "vi": "Đã xoá dự án", "en": "Design dossier deleted", "zh": "已删除设计档案", "ja": "設計図書を削除しました"},
   {"key": "designProjects.empty", "category": "designProjects", "vi": "Chưa có hồ sơ thiết kế nào.", "en": "No design dossiers yet.", "zh": "暂无设计档案。", "ja": "設計図書がまだありません。"},
   {"key": "designProjects.emptyFiltered", "category": "designProjects", "vi": "Không có dự án nào khớp bộ lọc hiện tại.", "en": "No design dossiers match the current filters.", "zh": "没有符合当前筛选条件的项目。", "ja": "現在の条件に一致するプロジェクトはありません。"},
-  {"key": "designProjects.total", "category": "designProjects", "vi": "{count} dự án", "en": "{count} projects", "zh": "{count} 个", "ja": "{count} 件"},
   {"key": "designProjects.paginationLabel", "category": "designProjects", "vi": "Trang {page} / {totalPages}", "en": "Page {page} of {totalPages}", "zh": "第 {page} / {totalPages} 页", "ja": "{page} / {totalPages} ページ"},
   {"key": "designProjects.field.code", "category": "designProjects", "vi": "Mã dự án", "en": "Project code", "zh": "项目编号", "ja": "プロジェクト番号"},
   {"key": "designProjects.field.name", "category": "designProjects", "vi": "Tên dự án", "en": "Project name", "zh": "项目名称", "ja": "プロジェクト名"},
@@ -423,5 +421,12 @@
   {"key": "designProjects.team.comments.confirmDelete", "category": "designProjects", "vi": "Xoá bình luận này?", "en": "Delete this comment?", "zh": "删除此评论？", "ja": "このコメントを削除しますか？"},
   {"key": "designProjects.team.comments.deleted", "category": "designProjects", "vi": "Đã xoá bình luận", "en": "Comment deleted", "zh": "评论已删除", "ja": "コメントを削除しました"},
   {"key": "designProjects.team.comments.required", "category": "designProjects", "vi": "Nội dung bình luận không được để trống.", "en": "Comment cannot be empty.", "zh": "评论内容不能为空。", "ja": "コメントを入力してください。"},
-  {"key": "designProjects.form.datesFromContract", "category": "designProjects", "vi": "Ngày bắt đầu và hạn hoàn thành lấy từ hợp đồng {code} khi còn trống; có thể sửa.", "en": "Empty start and due dates are taken from contract {code}; you can change them.", "zh": "开始日期和截止日期为空时取自合同 {code}，可修改。", "ja": "開始日と期限が空欄の場合は契約 {code} から取得します。変更できます。"}
+  {"key": "designProjects.form.datesFromContract", "category": "designProjects", "vi": "Ngày bắt đầu và hạn hoàn thành lấy từ hợp đồng {code} khi còn trống; có thể sửa.", "en": "Empty start and due dates are taken from contract {code}; you can change them.", "zh": "开始日期和截止日期为空时取自合同 {code}，可修改。", "ja": "開始日と期限が空欄の場合は契約 {code} から取得します。変更できます。"},
+  { "key": "designProjects.detail.stageDone", "category": "designProjects", "vi": "(đã xong)", "en": "(completed)", "zh": "（已完成）", "ja": "（完了）" },
+  { "key": "designProjects.close.action", "category": "design-projects", "vi": "Đóng hồ sơ", "en": "Close dossier", "zh": "关闭档案", "ja": "図書をクローズ" },
+  { "key": "designProjects.close.title", "category": "design-projects", "vi": "Đóng hồ sơ thiết kế", "en": "Close design dossier", "zh": "关闭设计档案", "ja": "設計図書をクローズ" },
+  { "key": "designProjects.close.description", "category": "design-projects", "vi": "Dùng khi hồ sơ không tiếp tục (khách dừng, trượt thầu). Dữ liệu được giữ nguyên, hồ sơ chuyển sang chỉ xem và không mở lại được.", "en": "Use this when the work will not continue (client stopped, tender lost). All data is kept; the dossier becomes read-only and cannot be reopened.", "zh": "用于不再继续的档案（客户终止、未中标）。数据全部保留，档案变为只读且无法重新打开。", "ja": "継続しない場合（お客様の中止、失注）に使います。データは保持され、閲覧専用になり再開はできません。" },
+  { "key": "designProjects.close.reason", "category": "design-projects", "vi": "Lý do đóng hồ sơ", "en": "Reason for closing", "zh": "关闭原因", "ja": "クローズ理由" },
+  { "key": "designProjects.close.done", "category": "design-projects", "vi": "Đã đóng hồ sơ thiết kế.", "en": "Design dossier closed.", "zh": "设计档案已关闭。", "ja": "設計図書をクローズしました。" },
+  { "key": "designProjects.close.banner", "category": "design-projects", "vi": "Hồ sơ đã đóng, chỉ xem được", "en": "This dossier is closed and read-only", "zh": "档案已关闭，仅可查看", "ja": "この図書はクローズ済みで閲覧のみです" }
 ]

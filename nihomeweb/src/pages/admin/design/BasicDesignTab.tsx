@@ -801,6 +801,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
           open={!!revisionsFor}
           onOpenChange={(v) => (!v ? setRevisionsFor(null) : undefined)}
           designProjectId={project.id}
+          readOnly={project.status === "Cancelled"}
           targetType="BasicDesignDoc"
           targetId={revisionsFor.id}
           targetCode={revisionsFor.documentCode}

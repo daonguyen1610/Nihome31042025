@@ -29,6 +29,12 @@ public sealed class ConsolidateDesignReviewRequest
     [Required] public string? RowVersion { get; set; }
 }
 
+public sealed class ReturnDesignReviewRequest
+{
+    [Required, MaxLength(4000)] public string Reason { get; set; } = string.Empty;
+    [Required] public string? RowVersion { get; set; }
+}
+
 public sealed class RecordDesignClientDecisionRequest
 {
     [Required, MaxLength(30)] public string Decision { get; set; } = string.Empty;

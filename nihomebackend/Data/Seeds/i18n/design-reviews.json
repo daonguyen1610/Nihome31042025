@@ -30,5 +30,21 @@
     "en": "The decision for “{{title}}” is {{status}}.",
     "zh": "“{{title}}”的决定为 {{status}}。",
     "ja": "「{{title}}」の決定は {{status}} です。"
+  },
+  {
+    "key": "notification.design-review.internal-returned.title",
+    "category": "notification",
+    "vi": "Hồ sơ thiết kế bị trả lại",
+    "en": "Design dossier returned",
+    "zh": "设计文件已退回",
+    "ja": "設計書類が差し戻されました"
+  },
+  {
+    "key": "notification.design-review.internal-returned.body",
+    "category": "notification",
+    "vi": "Hồ sơ “{{title}}” giai đoạn {{stage}} bị trả lại sau vòng nội bộ. Mở hồ sơ để xem lý do.",
+    "en": "The {{stage}} dossier “{{title}}” was returned after the internal round. Open it to see the reason.",
+    "zh": "{{stage}} 文件“{{title}}”在内部评审后被退回。打开查看原因。",
+    "ja": "{{stage}} の書類「{{title}}」は社内確認後に差し戻されました。理由は書類で確認してください。"
   }
 ]

@@ -214,6 +214,7 @@ public sealed class OperationalProjectTeamController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (await IsClosedDossierAsync(designProjectId, ct)) return ClosedDossier();
         if (!await CanViewTeamAsync(userId.Value, designProjectId, ct)) return Forbid();
         if (!await CanWriteTeamAsync(userId.Value, projectId, designProjectId, ct)) return NotFound();
         try
@@ -264,6 +265,7 @@ public sealed class OperationalProjectTeamController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (await IsClosedDossierAsync(designProjectId, ct)) return ClosedDossier();
         if (!await CanViewTeamAsync(userId.Value, designProjectId, ct)) return Forbid();
         if (!await CanWriteTeamAsync(userId.Value, projectId, designProjectId, ct)) return NotFound();
         try
@@ -304,6 +306,7 @@ public sealed class OperationalProjectTeamController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (await IsClosedDossierAsync(designProjectId, ct)) return ClosedDossier();
         if (!await CanViewTeamAsync(userId.Value, designProjectId, ct)) return Forbid();
         if (!await CanViewTeamScopeAsync(userId.Value, projectId, designProjectId, ct)) return NotFound();
         try
@@ -330,6 +333,7 @@ public sealed class OperationalProjectTeamController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (await IsClosedDossierAsync(designProjectId, ct)) return ClosedDossier();
         if (!await CanViewTeamAsync(userId.Value, designProjectId, ct)) return Forbid();
         if (!await CanViewTeamScopeAsync(userId.Value, projectId, designProjectId, ct)) return NotFound();
         var canManage = await CanWriteTeamAsync(userId.Value, projectId, designProjectId, ct);
@@ -344,9 +348,16 @@ public sealed class OperationalProjectTeamController(
     {
         if (!designProjectId.HasValue)
             return await access.CanManageTeamAsync(userId, projectId, ct);
+        if (await access.IsDesignDossierClosedAsync(designProjectId.Value, ct)) return false;
         return await access.CanManageDesignProjectTeamAsync(userId, designProjectId.Value, ct) ||
             await access.CanManageTeamAsync(userId, projectId, ct);
     }
+
+    private async Task<bool> IsClosedDossierAsync(int? designProjectId, CancellationToken ct) =>
+        designProjectId.HasValue && await access.IsDesignDossierClosedAsync(designProjectId.Value, ct);
+
+    private BadRequestObjectResult ClosedDossier() =>
+        BadRequest(new { message = "Hồ sơ thiết kế đã đóng, chỉ xem được." });
 
     private async Task<bool> CanViewTeamAsync(int userId, int? designProjectId, CancellationToken ct) =>
         await permissions.HasAsync(userId, "operations.projects.view", ct) ||

@@ -18,6 +18,7 @@ public interface IDesignReviewService
     Task<DesignReviewResponse?> AddCommentAsync(int projectId, int reviewId, AddDesignReviewCommentRequest request, int callerUserId, CancellationToken ct);
     Task<DesignReviewResponse?> ConsolidateAsync(int projectId, int reviewId, ConsolidateDesignReviewRequest request, int callerUserId, CancellationToken ct);
     Task<DesignReviewResponse?> SubmitClientAsync(int projectId, int reviewId, string rowVersion, int callerUserId, CancellationToken ct);
+    Task<DesignReviewResponse?> ReturnInternallyAsync(int projectId, int reviewId, ReturnDesignReviewRequest request, int callerUserId, CancellationToken ct);
     Task<DesignReviewResponse?> RecordClientDecisionAsync(int projectId, int reviewId, RecordDesignClientDecisionRequest request, int callerUserId, CancellationToken ct);
     Task<DesignReviewDocumentAccess?> ResolveAccessibleDocumentAsync(int projectId, int reviewId, long documentId, int callerUserId, CancellationToken ct);
     Task<IReadOnlyList<DesignReviewRecipientResponse>> ListRecipientCandidatesAsync(int projectId, int callerUserId, CancellationToken ct);
@@ -194,6 +195,8 @@ public sealed class DesignReviewService(
         var canManage = await CanManageAsync(projectId, callerUserId, ct);
         var isRecipient = review.Recipients.Any(item => item.UserId == callerUserId);
         if (!canManage && !isRecipient) return null;
+        EnsureDossierOpen(await db.DesignProjects.AsNoTracking()
+            .Where(item => item.Id == projectId).Select(item => item.Status).SingleAsync(ct));
         if (review.Status != DesignReviewStatus.InternalReview)
             throw new DesignReviewOperationException("Chỉ bình luận được khi hồ sơ đang trình nội bộ.");
         var body = request.Body?.Trim() ?? string.Empty;
@@ -260,6 +263,49 @@ public sealed class DesignReviewService(
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
         await NotifyAsync(review.Recipients.Select(item => item.UserId), "design-review.client-submitted", review, ct);
+        return Map(await LoadAsync(projectId, reviewId, ct), callerUserId, true);
+    }
+
+    /// <summary>
+    /// The dossier failed the internal round, before the client saw it. It keeps its record and comments;
+    /// the fix is a new revision (NICON feedback v2, section 7).
+    /// </summary>
+    public async Task<DesignReviewResponse?> ReturnInternallyAsync(
+        int projectId, int reviewId, ReturnDesignReviewRequest request, int callerUserId, CancellationToken ct)
+    {
+        await using var transaction = await ConceptDossierTransaction.BeginForReviewAsync(db, projectId, reviewId, ct);
+        var project = await RequireManagerAsync(projectId, callerUserId, ct);
+        var review = await QueryTracked(projectId).SingleOrDefaultAsync(item => item.Id == reviewId, ct);
+        if (review is null) return null;
+        EnsureManager(review, project, callerUserId);
+        if (review.Status is not (DesignReviewStatus.InternalReview or DesignReviewStatus.ReadyForClient))
+            throw new DesignReviewOperationException(
+                "Chỉ trả lại được hồ sơ đang trình nội bộ và chưa gửi khách hàng.");
+        var reason = request.Reason?.Trim() ?? string.Empty;
+        if (reason.Length == 0) throw new DesignReviewOperationException("Phải ghi lý do trả lại.");
+        ApplyVersion(review, request.RowVersion!);
+        review.Status = DesignReviewStatus.ReturnedInternally;
+        review.InternalReturnReason = reason;
+        review.InternalReturnedAt = DateTime.UtcNow;
+        review.InternalReturnedByUserId = callerUserId;
+        if (review.ConceptRevisionId.HasValue)
+        {
+            var optionId = await db.ConceptRevisions.AsNoTracking()
+                .Where(item => item.Id == review.ConceptRevisionId.Value)
+                .Select(item => item.ConceptOptionId).SingleAsync(ct);
+            var option = await db.ConceptOptions.SingleAsync(item => item.Id == optionId, ct);
+            // The submitted version stays frozen; the option is back in the designers' hands.
+            if (option.Status == ConceptOptionStatus.PendingInternalReview)
+            {
+                option.Status = ConceptOptionStatus.Drafting;
+                option.UpdatedAt = DateTime.UtcNow;
+                option.UpdatedByUserId = callerUserId;
+            }
+        }
+        Touch(review, callerUserId);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        await NotifyAsync(review.Recipients.Select(item => item.UserId), "design-review.internal-returned", review, ct);
         return Map(await LoadAsync(projectId, reviewId, ct), callerUserId, true);
     }
 
@@ -336,11 +382,18 @@ public sealed class DesignReviewService(
     {
         var project = await db.DesignProjects.AsNoTracking().SingleOrDefaultAsync(item => item.Id == projectId, ct)
             ?? throw new DesignReviewOperationException("Dự án thiết kế không tồn tại.");
+        EnsureDossierOpen(project.Status);
         if (project.ProjectManagerUserId != callerUserId && !await HasReviewAdministrativeBypassAsync(callerUserId, ct))
             throw new DesignReviewOperationException("Chỉ Chủ nhiệm thiết kế được quản lý hồ sơ trình.");
         if (!project.OperationalProjectId.HasValue)
             throw new DesignReviewOperationException("Dự án thiết kế chưa liên kết Dự án.");
         return project;
+    }
+
+    private static void EnsureDossierOpen(DesignProjectStatus status)
+    {
+        if (status == DesignProjectStatus.Cancelled)
+            throw new DesignReviewOperationException("Hồ sơ thiết kế đã đóng, chỉ xem được.");
     }
 
     private async Task<bool> CanManageAsync(int projectId, int callerUserId, CancellationToken ct) =>
@@ -580,6 +633,9 @@ public sealed class DesignReviewService(
         DesignManagerName = item.DesignManager?.FullName ?? item.DesignManager?.Email,
         InternalSummary = item.InternalSummary,
         InternalSubmittedAt = item.InternalSubmittedAt,
+        InternalReturnReason = item.InternalReturnReason,
+        InternalReturnedAt = item.InternalReturnedAt.HasValue
+            ? DateTime.SpecifyKind(item.InternalReturnedAt.Value, DateTimeKind.Utc) : null,
         ClientSubmittedAt = item.ClientSubmittedAt,
         ClientDecisionNote = item.ClientDecisionNote,
         ClientDecidedAt = item.ClientDecidedAt,

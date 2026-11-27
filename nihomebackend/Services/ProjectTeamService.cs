@@ -754,6 +754,8 @@ public sealed class ProjectTeamService(
     private async Task<bool> CanManageTeamAsync(int projectId, int? designProjectId, int userId, CancellationToken ct)
     {
         if (!designProjectId.HasValue) return await access.CanManageTeamAsync(userId, projectId, ct);
+        // Project-level managers keep no write path into a closed design dossier.
+        if (await access.IsDesignDossierClosedAsync(designProjectId.Value, ct)) return false;
         return await db.DesignProjects.AnyAsync(design => design.Id == designProjectId &&
             design.OperationalProjectId == projectId, ct) &&
             (await access.CanManageTeamAsync(userId, projectId, ct) ||

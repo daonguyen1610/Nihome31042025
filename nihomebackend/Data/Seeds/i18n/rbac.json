@@ -1832,6 +1832,22 @@
     "ja": "設計図書の作成・編集及び専門チームの設定を許可します。"
   },
   {
+    "key": "rbac.perm.design.projects.close.label",
+    "category": "rbac",
+    "vi": "Đóng hồ sơ thiết kế",
+    "en": "Close design dossiers",
+    "zh": "关闭设计档案",
+    "ja": "設計図書をクローズ"
+  },
+  {
+    "key": "rbac.perm.design.projects.close.description",
+    "category": "rbac",
+    "vi": "Đóng hồ sơ thiết kế không tiếp tục, bắt buộc ghi lý do. Dữ liệu được giữ nguyên.",
+    "en": "Close a design dossier that will not continue, with a required reason. All data is kept.",
+    "zh": "关闭不再继续的设计档案，须填写原因。数据保留不变。",
+    "ja": "継続しない設計図書を理由を記録してクローズします。データは保持されます。"
+  },
+  {
     "key": "rbac.perm.design.schedule.manage.label",
     "category": "rbac",
     "vi": "Quản lý tiến độ thiết kế chi tiết",

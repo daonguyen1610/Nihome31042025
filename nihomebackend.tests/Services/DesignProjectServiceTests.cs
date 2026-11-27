@@ -30,14 +30,11 @@ public class DesignProjectServiceTests : IDisposable
         _projectAccess.Setup(service => service.HasAdministrativeBypassAsync(
                 It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        var hardDelete = HardDeleteTestServices.Create(_db, _projectDocuments.Object);
         _sut = new DesignProjectService(
             _db,
             NullLogger<DesignProjectService>.Instance,
             _projectAccess.Object,
-            new LegacyProjectTeamSyncService(_db),
-            hardDelete.Plans,
-            hardDelete.Operations);
+            new LegacyProjectTeamSyncService(_db));
 
         var user = new ApplicationUser
         {
@@ -425,366 +422,99 @@ public class DesignProjectServiceTests : IDisposable
             It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    // ---------------- Delete ----------------
+    // ---------------- Close ----------------
 
     [Fact]
-    public async Task DeleteAsync_ConceptStage_Deletes()
+    public async Task CloseAsync_KeepsTheDossierAndRecordsWhoAndWhy()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
-        var impact = await _sut.GetDeletionImpactAsync(created.Id);
-        var removed = await _sut.DeleteAsync(created.Id, Confirm(impact!), _userId);
-        Assert.True(removed!.IsComplete);
-        Assert.Null(await _sut.GetAsync(created.Id));
+
+        var closed = await _sut.CloseAsync(created.Id, "  Khách dừng dự án  ", _userId);
+
+        Assert.NotNull(closed);
+        Assert.Equal("Cancelled", closed.Status);
+        Assert.Equal("Khách dừng dự án", closed.ClosedReason);
+        Assert.NotNull(closed.ClosedAt);
+        var stored = Assert.Single(_db.DesignProjects.Where(item => item.Id == created.Id));
+        Assert.Equal(_userId, stored.ClosedByUserId);
+        Assert.Equal(created.CurrentStage, stored.CurrentStage.ToString());
     }
 
-    [Fact]
-    public async Task DeleteAsync_BeyondConceptAfterManagedFileCleanup_DeletesAggregate()
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CloseAsync_RequiresAReason(string reason)
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
-        var operationalProject = new OperationalProject
-        {
-            Code = "OP-AGGREGATE",
-            Name = "Aggregate delete project",
-            CustomerId = _customerId,
-        };
-        _db.OperationalProjects.Add(operationalProject);
-        await _db.SaveChangesAsync();
-        var createdEntity = await _db.DesignProjects.FindAsync(created.Id);
-        createdEntity!.OperationalProjectId = operationalProject.Id;
-        await _db.SaveChangesAsync();
-        createdEntity.CurrentStage = DesignProjectStage.BasicDesign;
-        var scheduleMember = new OperationalProjectMember
-        {
-            OperationalProjectId = operationalProject.Id,
-            UserId = _userId,
-            Position = "Designer",
-            StartedAt = DateTime.UtcNow.AddDays(-1),
-            CreatedByUserId = _userId,
-            UpdatedByUserId = _userId,
-        };
-        _db.OperationalProjectMembers.Add(scheduleMember);
-        await _db.SaveChangesAsync();
-        var schedulePhase = new DesignSchedulePhase
-        {
-            OperationalProjectId = operationalProject.Id,
-            DesignProjectId = created.Id,
-            Code = DesignSchedulePhaseCode.Concept,
-            PlannedStart = new DateOnly(2026, 8, 1),
-            PlannedEnd = new DateOnly(2026, 8, 31),
-            Status = DesignScheduleStatus.NotStarted,
-            Weight = 100,
-            CreatedByUserId = _userId,
-            UpdatedByUserId = _userId,
-        };
-        _db.DesignSchedulePhases.Add(schedulePhase);
-        await _db.SaveChangesAsync();
-        var schedulePredecessor = new DesignScheduleTask
-        {
-            OperationalProjectId = operationalProject.Id,
-            DesignProjectId = created.Id,
-            PhaseId = schedulePhase.Id,
-            Code = "DS-DELETE-001",
-            Name = "Schedule predecessor",
-            DepartmentCode = "design",
-            AssigneeMemberId = scheduleMember.Id,
-            PlannedStart = new DateOnly(2026, 8, 1),
-            PlannedEnd = new DateOnly(2026, 8, 2),
-            Status = DesignScheduleStatus.NotStarted,
-            Weight = 50,
-            CreatedByUserId = _userId,
-            UpdatedByUserId = _userId,
-        };
-        var scheduleSuccessor = new DesignScheduleTask
-        {
-            OperationalProjectId = operationalProject.Id,
-            DesignProjectId = created.Id,
-            PhaseId = schedulePhase.Id,
-            Code = "DS-DELETE-002",
-            Name = "Schedule successor",
-            DepartmentCode = "design",
-            AssigneeMemberId = scheduleMember.Id,
-            PlannedStart = new DateOnly(2026, 8, 3),
-            PlannedEnd = new DateOnly(2026, 8, 4),
-            Status = DesignScheduleStatus.NotStarted,
-            Weight = 50,
-            CreatedByUserId = _userId,
-            UpdatedByUserId = _userId,
-        };
-        _db.AddRange(schedulePredecessor, scheduleSuccessor);
-        await _db.SaveChangesAsync();
-        _db.AddRange(
-            new DesignScheduleTaskDependency
-            {
-                OperationalProjectId = operationalProject.Id,
-                TaskId = scheduleSuccessor.Id,
-                PredecessorTaskId = schedulePredecessor.Id,
-            },
-            new DesignScheduleHistory
-            {
-                OperationalProjectId = operationalProject.Id,
-                DesignProjectId = created.Id,
-                EntityType = "Task",
-                EntityId = scheduleSuccessor.Id,
-                Action = "Created",
-                SnapshotJson = "{}",
-                ChangedByUserId = _userId,
-            });
-        await _db.SaveChangesAsync();
-        var basicDoc = new BasicDesignDoc
-        {
-            DesignProjectId = created.Id,
-            DisciplineCode = "architecture",
-            DocumentCode = "BD-DELETE-001",
-            Title = "Basic cleanup",
-            FilePath = "/files/design/basic/aggregate-basic.pdf",
-        };
-        var shopDrawing = new ShopDrawing
-        {
-            DesignProjectId = created.Id,
-            DisciplineCode = "architecture",
-            ConstructionItem = "Cleanup",
-            DrawingCode = "SD-DELETE-001",
-            Title = "Shop cleanup",
-            FilePath = "/files/design/shop/aggregate-shop.pdf",
-        };
-        var permit = new PermitChecklistItem
-        {
-            DesignProjectId = created.Id,
-            PermitTypeCode = "gpxd",
-            SubmittedFilePath = "/files/business-documents/permits/aggregate-submitted.pdf",
-            IssuedFilePath = "/files/business-documents/permits/aggregate-issued.pdf",
-        };
-        var predecessor = new ConstructionTask
-        {
-            DesignProjectId = created.Id,
-            TaskCode = "T-DELETE-001",
-            Name = "Predecessor",
-            PlannedStart = new DateOnly(2026, 8, 1),
-            PlannedEnd = new DateOnly(2026, 8, 2),
-        };
-        var successor = new ConstructionTask
-        {
-            DesignProjectId = created.Id,
-            TaskCode = "T-DELETE-002",
-            Name = "Successor",
-            PlannedStart = new DateOnly(2026, 8, 3),
-            PlannedEnd = new DateOnly(2026, 8, 4),
-        };
-        _db.AddRange(basicDoc, shopDrawing, permit, predecessor, successor);
-        await _db.SaveChangesAsync();
 
-        var release = new IfcRelease
-        {
-            DesignProjectId = created.Id,
-            ReleaseNumber = "IFC-DELETE-001",
-            Title = "Release cleanup",
-        };
-        var asBuiltCategory = new AsBuiltDocumentCategory
-        {
-            Code = "aggregate-delete",
-            Name = "Aggregate delete",
-            NameVi = "Aggregate delete",
-            NameEn = "Aggregate delete",
-            NameZh = "Aggregate delete",
-            NameJa = "Aggregate delete",
-            IsActive = true,
-        };
-        _db.AsBuiltDocumentCategories.Add(asBuiltCategory);
-        await _db.SaveChangesAsync();
-        var acceptance = new AcceptanceRecord
-        {
-            DesignProjectId = created.Id,
-            ConstructionTaskId = successor.Id,
-            AcceptanceCode = "A-DELETE-001",
-            Title = "Acceptance blocker",
-            AcceptanceDate = new DateOnly(2026, 8, 5),
-            Documents = "[\"/files/business-documents/acceptance/aggregate.pdf\"]",
-        };
-        var asBuilt = new AsBuiltDocument
-        {
-            DesignProjectId = created.Id,
-            CategoryId = asBuiltCategory.Id,
-            DocumentCode = "AB-DELETE-001",
-            Title = "As-built blocker",
-            FileUrl = "/files/business-documents/as-built/aggregate.pdf",
-        };
-        var handover = new HandoverRecord
-        {
-            DesignProjectId = created.Id,
-            HandoverCode = "H-DELETE-001",
-            Title = "Handover blocker",
-            PlannedHandoverDate = new DateOnly(2026, 8, 6),
-            ResponsibleUserId = _userId,
-            Documents = "[\"/files/business-documents/handover/aggregate.pdf\"]",
-            CreatedByUserId = _userId,
-            UpdatedByUserId = _userId,
-        };
-        _db.AddRange(
-            new DrawingRevision
-            {
-                TargetType = DrawingRevisionTargetType.BasicDesignDoc,
-                TargetId = basicDoc.Id,
-                RevisionNumber = 1,
-                ReasonCode = "client-change",
-                Note = "Basic revision",
-                IsCurrent = true,
-                CreatedByUserId = _userId,
-            },
-            new DrawingRevision
-            {
-                TargetType = DrawingRevisionTargetType.ShopDrawing,
-                TargetId = shopDrawing.Id,
-                RevisionNumber = 1,
-                ReasonCode = "client-change",
-                Note = "Shop revision",
-                IsCurrent = true,
-                CreatedByUserId = _userId,
-            },
-            new ConstructionTaskDependency
-            {
-                TaskId = successor.Id,
-                PredecessorTaskId = predecessor.Id,
-            },
-            acceptance,
-            asBuilt,
-            handover,
-            release);
-        await _db.SaveChangesAsync();
-        _db.IfcReleaseItems.Add(new IfcReleaseItem
-        {
-            IfcReleaseId = release.Id,
-            ShopDrawingId = shopDrawing.Id,
-        });
-        _db.ProjectDocuments.AddRange(
-            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Design,
-                nameof(BasicDesignDoc), "file", basicDoc.Id, basicDoc.FilePath!),
-            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Design,
-                nameof(ShopDrawing), "file", shopDrawing.Id, shopDrawing.FilePath!),
-            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Design,
-                nameof(PermitChecklistItem), "submittedPackage", permit.Id, permit.SubmittedFilePath!),
-            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Design,
-                nameof(PermitChecklistItem), "issuedPermit", permit.Id, permit.IssuedFilePath!),
-            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Acceptance,
-                nameof(AcceptanceRecord), "documents", acceptance.Id,
-                "/files/business-documents/acceptance/aggregate.pdf"),
-            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Acceptance,
-                nameof(AsBuiltDocument), "file", asBuilt.Id, asBuilt.FileUrl!),
-            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Handover,
-                nameof(HandoverRecord), "documents", handover.Id,
-                "/files/business-documents/handover/aggregate.pdf"));
-        await _db.SaveChangesAsync();
-
-        basicDoc.FilePath = null;
-        shopDrawing.FilePath = null;
-        permit.SubmittedFilePath = null;
-        permit.IssuedFilePath = null;
-        acceptance.Documents = "[]";
-        asBuilt.FileUrl = null;
-        handover.Documents = "[]";
-        await _db.SaveChangesAsync();
-
-        var impact = await _sut.GetDeletionImpactAsync(created.Id);
-        Assert.Contains(impact!.Items, item => item.Key == "design.schedulePhases" && item.Count == 1);
-        Assert.Contains(impact.Items, item => item.Key == "design.scheduleTasks" && item.Count == 2);
-        Assert.Contains(impact.Items, item => item.Key == "design.scheduleTaskDependencies" && item.Count == 1);
-        Assert.Contains(impact.Items, item => item.Key == "design.scheduleHistory" && item.Count == 1);
-        var removed = await _sut.DeleteAsync(created.Id, Confirm(impact!), _userId);
-
-        Assert.True(removed!.IsComplete);
-        Assert.Null(await _db.DesignProjects.FindAsync(created.Id));
-        Assert.Empty(await _db.DesignSchedulePhases.ToListAsync());
-        Assert.Empty(await _db.DesignScheduleTasks.ToListAsync());
-        Assert.Empty(await _db.DesignScheduleTaskDependencies.ToListAsync());
-        Assert.Empty(await _db.DesignScheduleHistory.ToListAsync());
-        Assert.Empty(await _db.DrawingRevisions.ToListAsync());
-        Assert.Empty(await _db.AcceptanceRecords.ToListAsync());
-        Assert.Empty(await _db.HandoverRecords.ToListAsync());
-        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
-            It.IsAny<int>(), It.IsAny<ProjectDocumentSourceModule>(), It.IsAny<string>(),
-            It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int?>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    private static ProjectDocument Sidecar(
-        int operationalProjectId,
-        ProjectDocumentSourceModule sourceModule,
-        string sourceEntityType,
-        string sourceSlot,
-        long sourceRecordId,
-        string localPath) => new()
-        {
-            OperationalProjectId = operationalProjectId,
-            Category = ProjectDocumentCategory.Unclassified,
-            SourceModule = sourceModule,
-            SourceType = ProjectDocumentSourceType.ExistingManagedFile,
-            SourceEntityType = sourceEntityType,
-            SourceSlot = sourceSlot,
-            SourceRecordId = sourceRecordId,
-            LocalPath = localPath,
-            OriginalFileName = Path.GetFileName(localPath),
-            Sha256 = new string('a', 64),
-            SyncStatus = ProjectDocumentSyncStatus.Deleted,
-        };
-
-    [Fact]
-    public async Task DeleteAsync_WhenFileStagingFails_PreservesAggregateAndTranslations()
-    {
-        var created = await _sut.CreateAsync(ValidCreate("Failed staging"), _userId);
-        var operationalProject = new OperationalProject
-        {
-            Code = "OP-STAGING-FAILURE",
-            Name = "Staging failure project",
-            CustomerId = _customerId,
-        };
-        _db.OperationalProjects.Add(operationalProject);
-        await _db.SaveChangesAsync();
-        var project = await _db.DesignProjects.FindAsync(created.Id);
-        project!.OperationalProjectId = operationalProject.Id;
-        var document = new BasicDesignDoc
-        {
-            DesignProjectId = created.Id,
-            DisciplineCode = "architecture",
-            DocumentCode = "BD-STAGING-FAILURE",
-            Title = "Failed staging document",
-            FilePath = "/images/unmanaged/staging-failure.pdf",
-        };
-        _db.BasicDesignDocs.Add(document);
-        await _db.SaveChangesAsync();
-        _db.ProjectDocuments.Add(Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Design,
-            nameof(BasicDesignDoc), "file", document.Id, document.FilePath));
-        _db.EntityTranslations.Add(new EntityTranslation
-        {
-            EntityType = NihomeBackend.Constants.EntityTypes.BasicDesignDoc,
-            EntityId = document.Id,
-            FieldName = "Title",
-            LanguageCode = "en",
-            Value = "Failed staging document",
-        });
-        await _db.SaveChangesAsync();
-        _projectDocuments.Setup(staging => staging.StageExistingManagedFileDeleteAsync(
-                operationalProject.Id, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc),
-                "file", document.Id, document.FilePath, _userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
-        var impact = await _sut.GetDeletionImpactAsync(created.Id);
-
-        Assert.False(impact!.CanDelete);
         await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
-            _sut.DeleteAsync(created.Id, Confirm(impact!), _userId));
+            _sut.CloseAsync(created.Id, reason, _userId));
 
-        Assert.NotNull(await _db.DesignProjects.FindAsync(created.Id));
-        Assert.NotNull(await _db.BasicDesignDocs.FindAsync(document.Id));
-        Assert.NotNull(await _db.EntityTranslations.SingleOrDefaultAsync(item =>
-            item.EntityType == NihomeBackend.Constants.EntityTypes.BasicDesignDoc && item.EntityId == document.Id));
+        Assert.Equal(DesignProjectStatus.Active, _db.DesignProjects.Single(item => item.Id == created.Id).Status);
     }
 
-    private static ConfirmDeletionRequest Confirm(
-        NihomeBackend.Models.DTOs.Responses.DeletionImpactResponse impact) => new()
+    [Fact]
+    public async Task EnsureForOpportunityAsync_StartsAFreshDossierWhenTheEarlierOneWasClosed()
+    {
+        var operational = new OperationalProject
         {
-            PlanToken = impact.PlanToken,
-            Confirmation = impact.RequiredConfirmation,
+            Code = "OP-NICON-REBID",
+            Name = "NICON - Chào lại nhà xưởng",
+            CustomerId = _customerId,
+        };
+        _db.OperationalProjects.Add(operational);
+        await _db.SaveChangesAsync();
+        var request = ValidCreate();
+        request.OperationalProjectId = operational.Id;
+        var closed = await _sut.CreateAsync(request, _userId);
+        await _sut.CloseAsync(closed.Id, "Trượt thầu", _userId);
+        var opportunity = new Opportunity
+        {
+            Name = "Chào lại nhà xưởng",
+            CustomerId = request.CustomerId,
+            OperationalProjectId = operational.Id,
+        };
+        _db.Opportunities.Add(opportunity);
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.EnsureForOpportunityAsync(opportunity.Id, _userId, "Hồ sơ chào lại", null);
+
+        Assert.True(result.Created);
+        Assert.NotEqual(closed.Id, result.DesignProject.Id);
+    }
+
+    [Fact]
+    public async Task CloseAsync_RefusesADossierThatAlreadyEnded()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await _sut.CloseAsync(created.Id, "Trượt thầu", _userId);
+
+        await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
+            _sut.CloseAsync(created.Id, "Lần hai", _userId));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_CannotCloseWithoutReason_AndCannotEditAClosedDossier()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var source = ValidCreate();
+        var update = new UpdateDesignProjectRequest
+        {
+            Name = "Đổi tên",
+            OperationalProjectId = source.OperationalProjectId,
+            CustomerId = source.CustomerId,
+            ContractId = source.ContractId,
+            Status = "Cancelled",
         };
 
-    // ---------------- Explicit contract creation ----------------
+        await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
+            _sut.UpdateAsync(created.Id, update, _userId));
+        await _sut.CloseAsync(created.Id, "Khách dừng dự án", _userId);
+        update.Status = "Active";
+
+        await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
+            _sut.UpdateAsync(created.Id, update, _userId));
+    }
 
     [Fact]
     public async Task EnsureForContractAsync_CreatesRowFirstTime()

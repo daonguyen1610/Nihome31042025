@@ -11,7 +11,7 @@ public interface IConceptDossierService
 {
     Task ValidateForReviewAsync(int revisionId, IReadOnlyCollection<long> documentIds, CancellationToken ct);
     Task<IReadOnlyList<ConceptRevisionResponse>> ListAsync(int optionId, CancellationToken ct);
-    Task<ConceptRevisionResponse> CreateRevisionAsync(int optionId, int userId, CancellationToken ct);
+    Task<ConceptRevisionResponse> CreateRevisionAsync(int optionId, CreateConceptRevisionRequest request, int userId, CancellationToken ct);
     Task<ConceptRevisionResponse> AddArtifactAsync(int optionId, int revisionId, AddConceptArtifactRequest request, int userId, CancellationToken ct);
     Task<ConceptRevisionResponse> RemoveArtifactAsync(int optionId, int revisionId, int artifactId, int userId, CancellationToken ct);
     Task<ConceptRevisionResponse> WaiveAsync(int optionId, int revisionId, WaiveConceptChecklistRequest request, int userId, CancellationToken ct);
@@ -22,6 +22,8 @@ public interface IConceptDossierService
 
 public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierService
 {
+    private const string ReasonCategory = "drawing_revision_reason";
+
     private static readonly ConceptArtifactKind[] RequiredKinds =
     [
         ConceptArtifactKind.Perspective,
@@ -37,11 +39,26 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
             .OrderByDescending(item => item.Number).ToListAsync(ct);
         var responses = revisions.Select(Map).ToList();
         if (revisions.Count > 0)
+        {
             responses[0].CanCreateRevision = await CanCreateRevisionAsync(revisions[0], ct);
+            if (revisions[0].FrozenAt is null)
+            {
+                var gaps = Evaluate(revisions[0]);
+                responses[0].Readiness = new ConceptReadinessResponse
+                {
+                    MissingKinds = gaps.Missing.Select(kind => kind.ToString()).ToList(),
+                    NeedsVisual = gaps.NeedsVisual,
+                    FilesWaiting = gaps.FilesWaiting,
+                    FilesBlocked = gaps.FilesBlocked,
+                    HasUnansweredEarlierFeedback = await HasUnansweredEarlierFeedbackAsync(revisions[0], ct),
+                };
+            }
+        }
         return responses;
     }
 
-    public async Task<ConceptRevisionResponse> CreateRevisionAsync(int optionId, int userId, CancellationToken ct)
+    public async Task<ConceptRevisionResponse> CreateRevisionAsync(
+        int optionId, CreateConceptRevisionRequest request, int userId, CancellationToken ct)
     {
         await using var transaction = await ConceptDossierTransaction.BeginAsync(db, optionId, ct);
         var option = await RequireManagerAsync(optionId, userId, ct);
@@ -52,11 +69,17 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
         if (last is null || last.FrozenAt is null)
             throw new ConceptOptionOperationException("Revision hiện tại còn là bản nháp.");
         if (!await CanCreateRevisionAsync(last, ct))
-            throw new ConceptOptionOperationException("Chỉ tạo revision mới sau khi khách yêu cầu sửa hoặc từ chối.");
+            throw new ConceptOptionOperationException(
+                "Chỉ tạo phiên bản mới sau khi hồ sơ bị trả lại nội bộ, hoặc khách yêu cầu sửa hay từ chối.");
+        var reason = (request.ReasonCode ?? string.Empty).Trim();
+        if (!await db.MasterDataOptions.AsNoTracking().AnyAsync(item =>
+                item.Category == ReasonCategory && item.Code == reason && item.IsActive, ct))
+            throw new ConceptOptionOperationException("Phải chọn lý do tạo phiên bản mới.");
         var next = new ConceptRevision
         {
             ConceptOptionId = optionId,
             Number = last.Number + 1,
+            ReasonCode = reason,
             CreatedByUserId = userId,
         };
         db.ConceptRevisions.Add(next);
@@ -247,30 +270,53 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
             throw new DesignReviewOperationException("Chỉ revision Concept mới nhất của phương án đang mở được trình.");
         if (revision.FrozenAt is not null)
             throw new DesignReviewOperationException("Revision Concept đã được trình nội bộ.");
-        if (revision.Number > 0 && await db.ConceptFeedback.AnyAsync(item =>
-            item.ConceptRevision.ConceptOptionId == revision.ConceptOptionId &&
-            item.ConceptRevision.Number < revision.Number && item.Response == null, ct))
+        if (await HasUnansweredEarlierFeedbackAsync(revision, ct))
             throw new DesignReviewOperationException("Phải ghi phản hồi cho mọi ý kiến khách trước khi trình revision mới.");
-        var kinds = revision.Artifacts.Select(item => item.Kind).ToHashSet();
-        var missing = RequiredKinds.Where(kind => !kinds.Contains(kind) &&
-            !revision.Waivers.Any(waiver => waiver.Kind == kind)).ToList();
-        if (missing.Count > 0)
-            throw new DesignReviewOperationException($"Hồ sơ Concept thiếu: {string.Join(", ", missing)}.");
-        if (!revision.Artifacts.Any(item => item.Kind is ConceptArtifactKind.Model3D or ConceptArtifactKind.Perspective))
+        var gaps = Evaluate(revision);
+        if (gaps.Missing.Count > 0)
+            throw new DesignReviewOperationException($"Hồ sơ Concept thiếu: {string.Join(", ", gaps.Missing)}.");
+        if (gaps.NeedsVisual)
             throw new DesignReviewOperationException("Hồ sơ Concept cần mô hình 3D hoặc hình phối cảnh.");
-        if (revision.Artifacts.Any(item => item.ProjectDocument.DeletedAt != null ||
-            item.ProjectDocument.SyncStatus != ProjectDocumentSyncStatus.Synced))
+        if (gaps.FilesWaiting + gaps.FilesBlocked > 0)
             throw new DesignReviewOperationException("Mọi file Concept phải còn hiệu lực và đồng bộ Drive trước khi trình.");
         var expected = revision.Artifacts.Select(item => item.ProjectDocumentId).OrderBy(id => id).ToArray();
         if (!expected.SequenceEqual(documentIds.OrderBy(id => id)))
             throw new DesignReviewOperationException("Hồ sơ trình phải chứa đúng các file của revision Concept.");
     }
 
+    private sealed record DossierGaps(
+        List<ConceptArtifactKind> Missing, bool NeedsVisual, int FilesWaiting, int FilesBlocked);
+
+    /// <summary>What the dossier itself still lacks; the submission check and the screen both use it.</summary>
+    private static DossierGaps Evaluate(ConceptRevision revision)
+    {
+        var attached = revision.Artifacts.Select(item => item.Kind).ToHashSet();
+        var missing = RequiredKinds.Where(kind => !attached.Contains(kind) &&
+            !revision.Waivers.Any(waiver => waiver.Kind == kind)).ToList();
+        // A missing perspective is already listed, so only a waived one leaves a second gap.
+        var needsVisual = !attached.Contains(ConceptArtifactKind.Perspective) &&
+            !attached.Contains(ConceptArtifactKind.Model3D) &&
+            !missing.Contains(ConceptArtifactKind.Perspective);
+        var unsynced = revision.Artifacts.Select(item => item.ProjectDocument)
+            .Where(document => document.DeletedAt != null || document.SyncStatus != ProjectDocumentSyncStatus.Synced)
+            .ToList();
+        // Pending and processing files finish by themselves; every other state needs a person.
+        var waiting = unsynced.Count(document => document.DeletedAt == null &&
+            document.SyncStatus is ProjectDocumentSyncStatus.Pending or ProjectDocumentSyncStatus.Processing);
+        return new DossierGaps(missing, needsVisual, waiting, unsynced.Count - waiting);
+    }
+
+    private Task<bool> HasUnansweredEarlierFeedbackAsync(ConceptRevision revision, CancellationToken ct) =>
+        db.ConceptFeedback.AsNoTracking().AnyAsync(item =>
+            item.ConceptRevision.ConceptOptionId == revision.ConceptOptionId &&
+            item.ConceptRevision.Number < revision.Number && item.Response == null, ct);
+
     private async Task<bool> CanCreateRevisionAsync(ConceptRevision revision, CancellationToken ct)
     {
         if (revision.FrozenAt is null) return false;
         var optionOpen = await db.ConceptOptions.AsNoTracking().AnyAsync(item =>
             item.Id == revision.ConceptOptionId && item.DesignProject.CurrentStage == DesignProjectStage.Concept &&
+            item.DesignProject.Status != DesignProjectStatus.Cancelled &&
             item.Status != ConceptOptionStatus.Finalized && item.Status != ConceptOptionStatus.Discarded, ct);
         if (!optionOpen) return false;
         // Legacy shared submissions have no selected revision. Use their source
@@ -284,7 +330,8 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
             .OrderByDescending(item => item.RevisionNumber)
             .Select(item => new { item.Status, item.ClientAcceptanceDocumentId }).FirstOrDefaultAsync(ct);
         return lastReview is not null &&
-            (lastReview.Status is DesignReviewStatus.ClientChangesRequested or DesignReviewStatus.Rejected ||
+            (lastReview.Status is DesignReviewStatus.ClientChangesRequested or DesignReviewStatus.Rejected
+                 or DesignReviewStatus.ReturnedInternally ||
              lastReview.Status == DesignReviewStatus.ClientApproved && lastReview.ClientAcceptanceDocumentId == null);
     }
 
@@ -293,6 +340,8 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
         var option = await db.ConceptOptions.Include(item => item.DesignProject)
             .SingleOrDefaultAsync(item => item.Id == optionId, ct)
             ?? throw new ConceptOptionOperationException("Phương án Concept không tồn tại.");
+        if (option.DesignProject.Status == DesignProjectStatus.Cancelled)
+            throw new ConceptOptionOperationException("Hồ sơ thiết kế đã đóng, chỉ xem được.");
         if (option.DesignProject.ProjectManagerUserId != userId &&
             !await db.Users.AsNoTracking().AnyAsync(item => item.Id == userId && item.IsActive &&
                 (item.Role == UserRole.SUPER_ADMIN || item.Role == UserRole.ADMIN ||
@@ -328,6 +377,8 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
         Id = item.Id,
         ConceptOptionId = item.ConceptOptionId,
         Number = item.Number,
+        ReasonCode = item.ReasonCode,
+        RequiredKinds = RequiredKinds.Select(kind => kind.ToString()).ToList(),
         CreatedAt = DateTime.SpecifyKind(item.CreatedAt, DateTimeKind.Utc),
         FrozenAt = item.FrozenAt.HasValue ? DateTime.SpecifyKind(item.FrozenAt.Value, DateTimeKind.Utc) : null,
         Artifacts = item.Artifacts.OrderBy(artifact => artifact.Id).Select(artifact => new ConceptArtifactResponse

@@ -40,6 +40,8 @@ public static class RbacSeeder
         var newLegalTemplateActions = catalog.Where(entry => entry.Module == "permit.templates")
             .Select(entry => entry.Action).Except(db.Permissions.Where(permission => permission.Module == "permit.templates")
                 .Select(permission => permission.Action)).ToHashSet();
+        var closingDossiersIsNew = !db.Permissions.Any(permission =>
+            permission.Module == "design.projects" && permission.Action == "close");
 
         SeedPermissions(db, catalog);
         SeedRoleGroups(db, bundle);
@@ -50,6 +52,7 @@ public static class RbacSeeder
         SeedInitialBusinessRolePermissionsIfMissing(db, catalog, bundle);
         RemoveAccidentalDesignLeadDeletionGrant(db);
         SeedNewLegalTemplatePermissions(db, newLegalTemplateActions);
+        if (closingDossiersIsNew) GrantDossierClosingToDesignHead(db);
         BackfillUserRoleEntityIds(db);
     }
 
@@ -62,6 +65,24 @@ public static class RbacSeeder
             item.Permission.Module == "design.records" && item.Permission.Action == "hard-delete").ToList();
         if (grants.Count == 0) return;
         db.RolePermissions.RemoveRange(grants);
+        db.SaveChanges();
+    }
+
+    private static void GrantDossierClosingToDesignHead(AppDbContext db)
+    {
+        // Closing a dossier belongs to the head of Design. Granted once, so a later revocation stays.
+        var permission = db.Permissions.SingleOrDefault(item =>
+            item.Module == "design.projects" && item.Action == "close");
+        var role = db.Roles.SingleOrDefault(item => item.Code == RbacRoleCodes.DesignLead);
+        if (permission is null || role is null ||
+            db.RolePermissions.Any(item => item.RoleId == role.Id && item.PermissionId == permission.Id))
+            return;
+        db.RolePermissions.Add(new RolePermission
+        {
+            RoleId = role.Id,
+            PermissionId = permission.Id,
+            CreatedAt = DateTime.UtcNow,
+        });
         db.SaveChanges();
     }
 

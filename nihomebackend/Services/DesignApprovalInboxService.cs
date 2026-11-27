@@ -113,7 +113,8 @@ public sealed class DesignApprovalInboxService(AppDbContext db)
     {
         var now = DateTime.UtcNow;
         return db.DesignScheduleTasks.AsNoTracking()
-            .Where(task => task.ApprovalStatus == DesignTaskApprovalStatus.Pending
+            .Where(task => task.DesignProject.Status != DesignProjectStatus.Cancelled
+                && task.ApprovalStatus == DesignTaskApprovalStatus.Pending
                 && task.ApproverMember.UserId == userId
                 && task.ApproverMember.StartedAt <= now
                 && (task.ApproverMember.EndedAt == null || task.ApproverMember.EndedAt > now));
@@ -121,7 +122,8 @@ public sealed class DesignApprovalInboxService(AppDbContext db)
 
     private IQueryable<DesignReview> PendingReviews(int userId) =>
         db.DesignReviews.AsNoTracking()
-            .Where(review => review.Status == DesignReviewStatus.InternalReview
+            .Where(review => review.DesignProject.Status != DesignProjectStatus.Cancelled
+                && review.Status == DesignReviewStatus.InternalReview
                 && review.Recipients.Any(recipient => recipient.UserId == userId));
 
     private static string? Term(DesignApprovalInboxQuery query) =>

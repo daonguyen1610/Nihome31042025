@@ -54,6 +54,14 @@ public class DesignProject
     /// <summary>Overall status — see <see cref="DesignProjectStatus"/>.</summary>
     public DesignProjectStatus Status { get; set; } = DesignProjectStatus.Active;
 
+    /// <summary>
+    /// A closed dossier (client stopped, tender lost) keeps all its data and is read-only.
+    /// Design dossiers are never deleted (NICON feedback v2, section 7).
+    /// </summary>
+    public string? ClosedReason { get; set; }
+    public DateTime? ClosedAt { get; set; }
+    public int? ClosedByUserId { get; set; }
+
     /// <summary>Free-text working note.</summary>
     public string? Note { get; set; }
 

@@ -224,7 +224,11 @@ public class RbacSeedDataTests
         var lead = PermissionCatalog.ExpandPatterns(
             leadDefaults.Patterns, allCodes, leadDefaults.Deny).ToHashSet();
 
-        Assert.True(manager.IsProperSupersetOf(lead));
+        // One exception: closing a whole dossier belongs to the head of Design only (NICON feedback v2,
+        // section 7). PRD v2 section 4 maps DESIGN_LEAD to the department head role.
+        Assert.Contains("design.projects.close", lead);
+        Assert.DoesNotContain("design.projects.close", manager);
+        Assert.True(manager.IsProperSupersetOf(lead.Except(["design.projects.close"])));
         Assert.Contains("proc.vendors.manage", manager);
         Assert.Contains("proc.rfqs.manage", manager);
         Assert.Contains("crm.contracts.view.downstream.all", manager);

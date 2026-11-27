@@ -146,7 +146,7 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
         icon: Lightbulb,
         rows: data.concepts.map((item) => ({
           id: item.id,
-          code: `#${item.id}`,
+          code: "", // A concept option has no document code; its database id means nothing to people.
           title: item.name,
           status: t(`concepts.status.${item.status}`),
         })),
@@ -274,7 +274,9 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
                       className="flex flex-wrap items-start justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
                     >
                       <div className="min-w-0">
-                        <p className="font-mono text-xs text-muted-foreground">{row.code}</p>
+                        {row.code ? (
+                          <p className="font-mono text-xs text-muted-foreground">{row.code}</p>
+                        ) : null}
                         <p className="truncate text-sm font-medium text-foreground">{row.title}</p>
                       </div>
                       <div className="flex items-center gap-1">

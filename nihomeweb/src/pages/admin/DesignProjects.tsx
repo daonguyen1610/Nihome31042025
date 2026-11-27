@@ -7,9 +7,9 @@ import { FieldScope } from "@/components/ui/field-scope";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Pencil, PenTool, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
+import { Archive, Pencil, PenTool, Plus, RefreshCcw, Search } from "lucide-react";
+import { ListPanel, ListTabs, PageHeader } from "@/components/admin/ListLayout";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { customerSelectOptions } from "@/lib/customerOptions";
 import { cn, rowAction } from "@/lib/utils";
@@ -51,7 +51,6 @@ import {
   type DesignProjectResponse,
   type DesignProjectStage,
   type DesignProjectStatus,
-  type DeletionImpactResponse,
   type UpdateDesignProjectRequest,
   type ContractResponse,
 } from "@/services/adminApi";
@@ -116,6 +115,7 @@ const AdminDesignProjects = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const canManage = has(ADMIN_PERMS.designProjectsManage);
+  const canClose = has(ADMIN_PERMS.designProjectsClose);
   const canCreate =
     canManage && has(ADMIN_PERMS.operationalProjectsManage) && has(ADMIN_PERMS.opportunitiesManage);
   const canPickUser = has(ADMIN_PERMS.users);
@@ -272,6 +272,11 @@ const AdminDesignProjects = () => {
   const userOptions = useMemo(() => users.map((u) => personOption(u, t)), [users, t]);
 
   const openDetail = (id: number) => navigate(`/admin/design-projects/${id}`);
+
+  const [filtersOpen, setFiltersOpen] = useState(customerId != null);
+  const filterCount = [status, customerId, pmId, leadId].filter(
+    (value) => value !== "" && value != null,
+  ).length;
 
   const resetFilters = () => {
     setSearch("");
@@ -453,51 +458,32 @@ const AdminDesignProjects = () => {
     }
   };
 
-  // -------- delete confirmation --------
-  const [deleting, setDeleting] = useState<DesignProjectListItemResponse | null>(null);
-  const [busyDelete, setBusyDelete] = useState(false);
-  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
-  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  // -------- close a dossier (dossiers are never deleted) --------
+  const [closing, setClosing] = useState<DesignProjectListItemResponse | null>(null);
+  const [closeReason, setCloseReason] = useState("");
+  const [closeBusy, setCloseBusy] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
 
-  const openDelete = async (project: DesignProjectListItemResponse) => {
-    setDeleting(project);
-    setDeleteImpact(null);
-    setDeleteError(null);
-    setDeleteImpactLoading(true);
-    try {
-      const response = await adminApi.getDesignProjectDeletionImpact(project.id);
-      setDeleteImpact(response.data);
-    } catch (err) {
-      setDeleteError(uiError(err));
-    } finally {
-      setDeleteImpactLoading(false);
-    }
+  const openClose = (project: DesignProjectListItemResponse) => {
+    setClosing(project);
+    setCloseReason("");
+    setCloseError(null);
   };
 
-  const confirmDelete = async (confirmation: string) => {
-    if (!deleting || !deleteImpact) return null;
-    setBusyDelete(true);
-    setDeleteError(null);
+  const confirmClose = async () => {
+    if (!closing) return;
+    setCloseBusy(true);
+    setCloseError(null);
     try {
-      const response = await adminApi.deleteDesignProject(deleting.id, {
-        planToken: deleteImpact.planToken,
-        confirmation,
-      });
-      return response.status === 204 ? null : response.data;
+      await adminApi.closeDesignProject(closing.id, closeReason.trim());
+      toast({ title: t("designProjects.close.done") });
+      setClosing(null);
+      await fetchList();
     } catch (err) {
-      setDeleteError(uiError(err));
-      throw err;
+      setCloseError(uiError(err));
     } finally {
-      setBusyDelete(false);
+      setCloseBusy(false);
     }
-  };
-
-  const completeDelete = async () => {
-    toast({ title: t("designProjects.deleted") });
-    setDeleting(null);
-    setDeleteImpact(null);
-    await fetchList();
   };
 
   // ----------------------------- render -----------------------------
@@ -505,372 +491,379 @@ const AdminDesignProjects = () => {
   return (
     <AdminLayout>
       <div className="space-y-4">
-        <header className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-foreground text-2xl font-semibold">{t("designProjects.title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("designProjects.subtitle")}</p>
-          </div>
-          {canCreate ? (
-            <Button size="sm" onClick={openCreate}>
-              <Plus className="mr-1 h-4 w-4" />
-              {t("designProjects.new")}
-            </Button>
-          ) : null}
-        </header>
-
-        <section className="rounded-lg border border-border bg-card p-3 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <FieldScope className="lg:col-span-2">
-              <Label className="text-xs">{t("designProjects.filter.search")}</Label>
-              <div className="relative mt-1">
-                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  className="pl-8"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder={t("designProjects.filter.search")}
-                />
-              </div>
-            </FieldScope>
-            <FieldScope>
-              <Label className="text-xs">{t("designProjects.field.stage")}</Label>
-              <Select
-                value={stage}
-                onValueChange={(v) => {
-                  setStage(v === "__all__" ? "" : (v as DesignProjectStage));
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="mt-1 h-9">
-                  <SelectValue placeholder={t("designProjects.filter.allStages")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">{t("designProjects.filter.allStages")}</SelectItem>
-                  {DESIGN_PROJECT_STAGES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {t(`designProjects.stage.${s}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FieldScope>
-            <FieldScope>
-              <Label className="text-xs">{t("designProjects.field.status")}</Label>
-              <Select
-                value={status}
-                onValueChange={(v) => {
-                  setStatus(v === "__all__" ? "" : (v as DesignProjectStatus));
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="mt-1 h-9">
-                  <SelectValue placeholder={t("designProjects.filter.allStatuses")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">{t("designProjects.filter.allStatuses")}</SelectItem>
-                  {DESIGN_PROJECT_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {t(`designProjects.status.${s}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FieldScope>
-            {customerOptions.length > 0 ? (
-              <FieldScope>
-                <Label className="text-xs">{t("designProjects.field.customer")}</Label>
-                <SearchableSelect
-                  className="mt-1"
-                  value={customerId != null ? String(customerId) : ""}
-                  onChange={(v) => {
-                    setCustomerId(v ? Number(v) : null);
-                    setPage(1);
-                  }}
-                  options={[
-                    { value: "", label: t("designProjects.filter.allCustomers") },
-                    ...customerOptions,
-                  ]}
-                  placeholder={t("designProjects.filter.allCustomers")}
-                  searchPlaceholder={t("customers.picker.search")}
-                />
-              </FieldScope>
-            ) : null}
-            {canPickUser && userOptions.length > 0 ? (
-              <>
-                <FieldScope>
-                  <Label className="text-xs">{t("designProjects.field.pm")}</Label>
-                  <SearchableSelect
-                    ariaLabel={t("designProjects.field.pm")}
-                    className="mt-1"
-                    value={pmId != null ? String(pmId) : ""}
-                    onChange={(v) => {
-                      setPmId(v ? Number(v) : null);
-                      setPage(1);
-                    }}
-                    options={[
-                      { value: "", label: t("designProjects.filter.allPms") },
-                      ...userOptions,
-                    ]}
-                    placeholder={t("designProjects.filter.allPms")}
-                  />
-                </FieldScope>
-                <FieldScope>
-                  <Label className="text-xs">{t("designProjects.field.designLead")}</Label>
-                  <SearchableSelect
-                    ariaLabel={t("designProjects.field.designLead")}
-                    className="mt-1"
-                    value={leadId != null ? String(leadId) : ""}
-                    onChange={(v) => {
-                      setLeadId(v ? Number(v) : null);
-                      setPage(1);
-                    }}
-                    options={[
-                      { value: "", label: t("designProjects.filter.allLeads") },
-                      ...userOptions,
-                    ]}
-                    placeholder={t("designProjects.filter.allLeads")}
-                  />
-                </FieldScope>
-              </>
-            ) : null}
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => void fetchList()} disabled={loading}>
-              <RefreshCcw className={cn("mr-1 h-4 w-4", loading && "animate-spin")} />
-              {t("common.refresh")}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={resetFilters} disabled={loading}>
-              {t("common.reset")}
-            </Button>
-            <span className="ml-auto text-xs text-muted-foreground">
-              {t("designProjects.total").replace("{count}", String(total))}
-            </span>
-          </div>
-        </section>
-
-        {loading ? (
-          <PageLoading />
-        ) : error ? (
-          <PageError message={error} onRetry={() => void fetchList()} />
-        ) : rows.length === 0 ? (
-          <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground">
-            <p>{hasActiveFilter ? t("designProjects.emptyFiltered") : t("designProjects.empty")}</p>
-            {hasActiveFilter ? (
-              <Button variant="outline" size="sm" className="mt-3" onClick={resetFilters}>
-                {t("common.reset")}
+        <PageHeader
+          title={t("designProjects.title")}
+          count={loading || error ? undefined : total}
+          description={t("designProjects.subtitle")}
+          actions={
+            canCreate ? (
+              <Button onClick={openCreate}>
+                <Plus className="mr-1 h-4 w-4" />
+                {t("designProjects.new")}
               </Button>
-            ) : null}
-          </div>
-        ) : (
-          <>
-            {/* Mobile / tablet card view */}
-            <div className="grid gap-3 xl:hidden">
-              {rows.map((r) => {
-                const canDelete = canManage;
-                return (
-                  <article
-                    key={r.id}
-                    className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/70"
-                    onClick={() => openDetail(r.id)}
-                  >
-                    <header className="flex items-start justify-between gap-2">
-                      <div className="flex min-w-0 items-start gap-2">
-                        <div className="min-w-0">
-                          <h3 className="break-words text-sm font-semibold leading-tight">
-                            {r.name}
-                          </h3>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {r.projectCode}
-                            {r.customerName ? ` · ${r.customerName}` : ""}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Badge
-                          variant="outline"
-                          className={cn("whitespace-nowrap", STAGE_BADGE[r.currentStage])}
-                        >
-                          {t(`designProjects.stage.${r.currentStage}`)}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
-                        >
-                          {t(`designProjects.status.${r.status}`)}
-                        </Badge>
-                      </div>
-                    </header>
-                    <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <dt className="text-muted-foreground">{t("designProjects.field.pm")}</dt>
-                        <dd className="font-medium">{r.projectManagerName ?? "—"}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-muted-foreground">
-                          {t("designProjects.field.designLead")}
-                        </dt>
-                        <dd className="font-medium">{r.designLeadName ?? "—"}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-muted-foreground">
-                          {t("designProjects.field.startDate")}
-                        </dt>
-                        <dd className="font-medium">{formatDate(r.startDate, lang)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-muted-foreground">
-                          {t("designProjects.field.deadline")}
-                        </dt>
-                        <dd className="font-medium">{formatDate(r.deadline, lang)}</dd>
-                      </div>
-                    </dl>
-                    {canManage ? (
-                      <div
-                        className="mt-2 flex justify-end gap-1.5"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Button variant="ghost" size="sm" onClick={() => void openEdit(r.id)}>
-                          <Pencil className="mr-1 h-3.5 w-3.5" />
-                          {t("common.edit")}
-                        </Button>
-                        <span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={!canDelete}
-                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:text-muted-foreground"
-                            onClick={() => void openDelete(r)}
-                          >
-                            <Trash2 className="mr-1 h-3.5 w-3.5" />
-                            {t("common.delete")}
-                          </Button>
-                        </span>
-                      </div>
-                    ) : null}
-                  </article>
-                );
-              })}
-            </div>
+            ) : null
+          }
+        />
 
-            {/* Desktop table */}
-            <div className="hidden overflow-x-auto rounded-lg border border-border bg-card shadow-sm xl:block">
-              <table className="min-w-full text-sm">
-                <thead className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2">{t("designProjects.field.code")}</th>
-                    <th className="px-3 py-2">{t("designProjects.field.name")}</th>
-                    <th className="px-3 py-2">{t("designProjects.field.customer")}</th>
-                    <th className="px-3 py-2">{t("designProjects.field.pm")}</th>
-                    <th className="px-3 py-2">{t("designProjects.field.stage")}</th>
-                    <th className="px-3 py-2">{t("designProjects.field.status")}</th>
-                    <th className="px-3 py-2">{t("designProjects.field.deadline")}</th>
-                    <th className="px-3 py-2 text-right">{t("common.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {rows.map((r) => {
-                    const canDelete = canManage;
-                    return (
-                      <tr
-                        key={r.id}
-                        className="cursor-pointer transition-colors hover:bg-muted/70"
-                        {...rowAction(() => openDetail(r.id))}
-                      >
-                        <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-muted-foreground">
-                          {r.projectCode}
-                        </td>
-                        <td className="px-3 py-2 font-medium text-foreground">
-                          <div className="flex items-center gap-2">
-                            <PenTool className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="break-words">{r.name}</span>
+        <ListTabs<DesignProjectStage | "">
+          label={t("designProjects.field.stage")}
+          value={stage}
+          onChange={(next) => {
+            setStage(next);
+            setPage(1);
+          }}
+          tabs={[
+            { value: "", label: t("designProjects.filter.allStages") },
+            ...DESIGN_PROJECT_STAGES.map((value) => ({
+              value,
+              label: t(`designProjects.stage.${value}`),
+            })),
+          ]}
+        />
+
+        <ListPanel
+          search={
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-8"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                aria-label={t("designProjects.filter.search")}
+                placeholder={t("designProjects.filter.search")}
+              />
+            </div>
+          }
+          filtersOpen={filtersOpen}
+          onFiltersOpenChange={setFiltersOpen}
+          filterCount={filterCount}
+          onClear={hasActiveFilter ? resetFilters : undefined}
+          tools={
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => void fetchList()}
+              disabled={loading}
+              aria-label={t("common.refresh")}
+              title={t("common.refresh")}
+            >
+              <RefreshCcw className={cn("h-4 w-4", loading && "animate-spin")} />
+            </Button>
+          }
+          filters={
+            <>
+              <FieldScope>
+                <Label className="text-xs">{t("designProjects.field.status")}</Label>
+                <Select
+                  value={status}
+                  onValueChange={(v) => {
+                    setStatus(v === "__all__" ? "" : (v as DesignProjectStatus));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="mt-1 h-9">
+                    <SelectValue placeholder={t("designProjects.filter.allStatuses")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">
+                      {t("designProjects.filter.allStatuses")}
+                    </SelectItem>
+                    {DESIGN_PROJECT_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {t(`designProjects.status.${s}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FieldScope>
+              {customerOptions.length > 0 ? (
+                <FieldScope>
+                  <Label className="text-xs">{t("designProjects.field.customer")}</Label>
+                  <SearchableSelect
+                    className="mt-1"
+                    value={customerId != null ? String(customerId) : ""}
+                    onChange={(v) => {
+                      setCustomerId(v ? Number(v) : null);
+                      setPage(1);
+                    }}
+                    options={[
+                      { value: "", label: t("designProjects.filter.allCustomers") },
+                      ...customerOptions,
+                    ]}
+                    placeholder={t("designProjects.filter.allCustomers")}
+                    searchPlaceholder={t("customers.picker.search")}
+                  />
+                </FieldScope>
+              ) : null}
+              {canPickUser && userOptions.length > 0 ? (
+                <>
+                  <FieldScope>
+                    <Label className="text-xs">{t("designProjects.field.pm")}</Label>
+                    <SearchableSelect
+                      ariaLabel={t("designProjects.field.pm")}
+                      className="mt-1"
+                      value={pmId != null ? String(pmId) : ""}
+                      onChange={(v) => {
+                        setPmId(v ? Number(v) : null);
+                        setPage(1);
+                      }}
+                      options={[
+                        { value: "", label: t("designProjects.filter.allPms") },
+                        ...userOptions,
+                      ]}
+                      placeholder={t("designProjects.filter.allPms")}
+                    />
+                  </FieldScope>
+                  <FieldScope>
+                    <Label className="text-xs">{t("designProjects.field.designLead")}</Label>
+                    <SearchableSelect
+                      ariaLabel={t("designProjects.field.designLead")}
+                      className="mt-1"
+                      value={leadId != null ? String(leadId) : ""}
+                      onChange={(v) => {
+                        setLeadId(v ? Number(v) : null);
+                        setPage(1);
+                      }}
+                      options={[
+                        { value: "", label: t("designProjects.filter.allLeads") },
+                        ...userOptions,
+                      ]}
+                      placeholder={t("designProjects.filter.allLeads")}
+                    />
+                  </FieldScope>
+                </>
+              ) : null}
+            </>
+          }
+        >
+          {loading ? (
+            <PageLoading />
+          ) : error ? (
+            <PageError message={error} onRetry={() => void fetchList()} />
+          ) : rows.length === 0 ? (
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              <p>
+                {hasActiveFilter ? t("designProjects.emptyFiltered") : t("designProjects.empty")}
+              </p>
+              {hasActiveFilter ? (
+                <Button variant="outline" size="sm" className="mt-3" onClick={resetFilters}>
+                  {t("common.reset")}
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              {/* Mobile / tablet card view */}
+              <div className="grid gap-3 p-3 xl:hidden">
+                {rows.map((r) => {
+                  const open = r.status !== "Cancelled";
+                  const closable = canClose && open && r.status !== "Completed";
+                  return (
+                    <article
+                      key={r.id}
+                      className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/70"
+                      onClick={() => openDetail(r.id)}
+                    >
+                      <header className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-start gap-2">
+                          <div className="min-w-0">
+                            <h3 className="break-words text-sm font-semibold leading-tight">
+                              {r.name}
+                            </h3>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {r.projectCode}
+                              {r.customerName ? ` · ${r.customerName}` : ""}
+                            </p>
                           </div>
-                        </td>
-                        <td className="px-3 py-2 text-foreground">{r.customerName ?? "—"}</td>
-                        <td className="px-3 py-2 text-foreground">{r.projectManagerName ?? "—"}</td>
-                        <td className="px-3 py-2">
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
                           <Badge
                             variant="outline"
                             className={cn("whitespace-nowrap", STAGE_BADGE[r.currentStage])}
                           >
                             {t(`designProjects.stage.${r.currentStage}`)}
                           </Badge>
-                        </td>
-                        <td className="px-3 py-2">
                           <Badge
                             variant="outline"
                             className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
                           >
                             {t(`designProjects.status.${r.status}`)}
                           </Badge>
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap text-foreground">
-                          {formatDate(r.deadline, lang)}
-                        </td>
-                        <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                          {canManage ? (
+                        </div>
+                      </header>
+                      <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <dt className="text-muted-foreground">{t("designProjects.field.pm")}</dt>
+                          <dd className="font-medium">{r.projectManagerName ?? "—"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">
+                            {t("designProjects.field.designLead")}
+                          </dt>
+                          <dd className="font-medium">{r.designLeadName ?? "—"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">
+                            {t("designProjects.field.startDate")}
+                          </dt>
+                          <dd className="font-medium">{formatDate(r.startDate, lang)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">
+                            {t("designProjects.field.deadline")}
+                          </dt>
+                          <dd className="font-medium">{formatDate(r.deadline, lang)}</dd>
+                        </div>
+                      </dl>
+                      {(canManage && open) || closable ? (
+                        <div
+                          className="mt-2 flex justify-end gap-1.5"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {canManage && open ? (
+                            <Button variant="ghost" size="sm" onClick={() => void openEdit(r.id)}>
+                              <Pencil className="mr-1 h-3.5 w-3.5" />
+                              {t("common.edit")}
+                            </Button>
+                          ) : null}
+                          {closable ? (
+                            <Button variant="ghost" size="sm" onClick={() => openClose(r)}>
+                              <Archive className="mr-1 h-3.5 w-3.5" />
+                              {t("designProjects.close.action")}
+                            </Button>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden overflow-x-auto xl:block">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="px-2 py-2 2xl:px-3">{t("designProjects.field.code")}</th>
+                      <th className="px-2 py-2 2xl:px-3">{t("designProjects.field.name")}</th>
+                      <th className="px-2 py-2 2xl:px-3">{t("designProjects.field.customer")}</th>
+                      <th className="px-2 py-2 2xl:px-3">{t("designProjects.field.pm")}</th>
+                      <th className="px-2 py-2 2xl:px-3">{t("designProjects.field.stage")}</th>
+                      <th className="px-2 py-2 2xl:px-3">{t("designProjects.field.status")}</th>
+                      <th className="px-2 py-2 2xl:px-3">{t("designProjects.field.deadline")}</th>
+                      <th className="px-2 py-2 2xl:px-3 text-right">{t("common.actions")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {rows.map((r) => {
+                      const open = r.status !== "Cancelled";
+                      const closable = canClose && open && r.status !== "Completed";
+                      return (
+                        <tr
+                          key={r.id}
+                          className="cursor-pointer transition-colors hover:bg-muted/70"
+                          {...rowAction(() => openDetail(r.id))}
+                        >
+                          <td className="whitespace-nowrap px-2 py-2 2xl:px-3 font-mono text-xs text-muted-foreground">
+                            {r.projectCode}
+                          </td>
+                          <td className="px-2 py-2 2xl:px-3 font-medium text-foreground">
+                            <div className="flex items-center gap-2">
+                              <PenTool className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                              <span className="break-words">{r.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-2 py-2 2xl:px-3 text-foreground">
+                            {r.customerName ?? "—"}
+                          </td>
+                          <td className="px-2 py-2 2xl:px-3 text-foreground">
+                            {r.projectManagerName ?? "—"}
+                          </td>
+                          <td className="px-2 py-2 2xl:px-3">
+                            <Badge
+                              variant="outline"
+                              className={cn("whitespace-nowrap", STAGE_BADGE[r.currentStage])}
+                            >
+                              {t(`designProjects.stage.${r.currentStage}`)}
+                            </Badge>
+                          </td>
+                          <td className="px-2 py-2 2xl:px-3">
+                            <Badge
+                              variant="outline"
+                              className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
+                            >
+                              {t(`designProjects.status.${r.status}`)}
+                            </Badge>
+                          </td>
+                          <td className="px-2 py-2 2xl:px-3 whitespace-nowrap text-foreground">
+                            {formatDate(r.deadline, lang)}
+                          </td>
+                          <td className="px-2 py-2 2xl:px-3" onClick={(e) => e.stopPropagation()}>
                             <div className="flex justify-end gap-1">
-                              <Button
-                                aria-label={t("common.edit")}
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => void openEdit(r.id)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <span>
+                              {canManage && open ? (
                                 <Button
+                                  aria-label={t("common.edit")}
+                                  title={t("common.edit")}
                                   variant="ghost"
                                   size="sm"
-                                  disabled={!canDelete}
-                                  aria-label={t("common.delete")}
-                                  className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                  onClick={() => void openDelete(r)}
+                                  onClick={() => void openEdit(r.id)}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Pencil className="h-4 w-4" />
                                 </Button>
-                              </span>
+                              ) : null}
+                              {closable ? (
+                                <Button
+                                  aria-label={t("designProjects.close.action")}
+                                  title={t("designProjects.close.action")}
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openClose(r)}
+                                >
+                                  <Archive className="h-4 w-4" />
+                                </Button>
+                              ) : null}
                             </div>
-                          ) : null}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {totalPages > 1 ? (
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>
-                  {t("designProjects.paginationLabel")
-                    .replace("{page}", String(page))
-                    .replace("{totalPages}", String(totalPages))}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page <= 1}
-                  >
-                    {t("common.prev")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                  >
-                    {t("common.next")}
-                  </Button>
-                </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            ) : null}
-          </>
-        )}
+
+              {totalPages > 1 ? (
+                <div className="flex items-center justify-between border-t p-3 text-sm text-muted-foreground">
+                  <span>
+                    {t("designProjects.paginationLabel")
+                      .replace("{page}", String(page))
+                      .replace("{totalPages}", String(totalPages))}
+                  </span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page <= 1}
+                    >
+                      {t("common.prev")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page >= totalPages}
+                    >
+                      {t("common.next")}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
+        </ListPanel>
       </div>
 
       {/* Create / edit dialog */}
@@ -1072,7 +1065,7 @@ const AdminDesignProjects = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {DESIGN_PROJECT_STATUSES.map((s) => (
+                    {DESIGN_PROJECT_STATUSES.filter((s) => s !== "Cancelled").map((s) => (
                       <SelectItem key={s} value={s}>
                         {t(`designProjects.status.${s}`)}
                       </SelectItem>
@@ -1110,22 +1103,50 @@ const AdminDesignProjects = () => {
         </DialogContent>
       </Dialog>
 
-      <DeletionImpactDialog
-        open={deleting != null}
-        impact={deleteImpact}
-        loading={deleteImpactLoading}
-        deleting={busyDelete}
-        error={deleteError}
-        onOpenChange={(open) => {
-          if (!open && !busyDelete) {
-            setDeleting(null);
-            setDeleteImpact(null);
-            setDeleteError(null);
-          }
+      <Dialog
+        open={closing !== null}
+        onOpenChange={(next) => {
+          if (!next && !closeBusy) setClosing(null);
         }}
-        onConfirm={confirmDelete}
-        onCompleted={completeDelete}
-      />
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("designProjects.close.title")}</DialogTitle>
+            <DialogDescription>
+              {closing ? `${closing.projectCode} · ${closing.name}. ` : ""}
+              {t("designProjects.close.description")}
+            </DialogDescription>
+          </DialogHeader>
+          <FieldScope>
+            <Label>{t("designProjects.close.reason")} *</Label>
+            <Textarea
+              className="mt-1"
+              rows={3}
+              maxLength={1000}
+              required
+              value={closeReason}
+              onChange={(event) => setCloseReason(event.target.value)}
+            />
+          </FieldScope>
+          {closeError ? (
+            <p role="alert" className="text-sm text-destructive">
+              {closeError}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClosing(null)} disabled={closeBusy}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void confirmClose()}
+              disabled={closeBusy || !closeReason.trim()}
+            >
+              {t("designProjects.close.action")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

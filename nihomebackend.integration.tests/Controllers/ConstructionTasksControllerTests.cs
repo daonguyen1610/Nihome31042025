@@ -223,35 +223,6 @@ public class ConstructionTasksControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Drawings_ProjectDeletionImpactIncludesLinks_AndDeletesOwnedLinks()
-    {
-        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
-        var project = await CreateProjectAsync();
-        var task = await CreateTaskAsync(project, "2026-06-01", "2026-06-10");
-        var item = await CreateIfcItemAsync(project, IfcReleaseStatus.Released);
-        var initial = (await Client.GetFromJsonAsync<ConstructionTaskDrawingsResponse>($"/api/construction-tasks/{task}/drawings"))!;
-        var before = (await Client.GetFromJsonAsync<DeletionImpactResponse>($"/api/design-projects/{project}/deletion-impact"))!;
-        var operationalProjectId = await WithDbAsync(db => db.DesignProjects.Where(x => x.Id == project)
-            .Select(x => x.OperationalProjectId).SingleAsync());
-        (await Client.PutAsJsonAsync($"/api/construction-tasks/{task}/drawings",
-            new { version = initial.Version, ifcReleaseItemIds = new[] { item } })).EnsureSuccessStatusCode();
-        var after = (await Client.GetFromJsonAsync<DeletionImpactResponse>($"/api/design-projects/{project}/deletion-impact"))!;
-        after.Items.Should().ContainSingle(x => x.Key == "design.taskDrawings" && x.Count == 1 && x.Action == "Delete");
-        after.PlanToken.Should().NotBe(before.PlanToken);
-        using var stale = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/design-projects/{project}")
-        {
-            Content = JsonContent.Create(new { planToken = before.PlanToken, confirmation = before.RequiredConfirmation }),
-        });
-        stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await WithDbAsync(db => db.ConstructionTaskDrawings.AnyAsync(x => x.ConstructionTaskId == task))).Should().BeTrue();
-        (await DeleteWithImpactAsync($"/api/design-projects/{project}")).EnsureSuccessStatusCode();
-        (await WithDbAsync(db => db.ConstructionTaskDrawings.AnyAsync(x => x.ConstructionTaskId == task))).Should().BeFalse();
-        (await WithDbAsync(db => db.IfcReleaseItems.AnyAsync(x => x.Id == item))).Should().BeFalse();
-        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(x => x.Id == operationalProjectId)))
-            .Should().BeTrue("the independent Operational Project is preserved");
-    }
-
-    [Fact]
     public async Task List_WithoutAuth_ReturnsUnauthorized()
     {
         (await Client.GetAsync("/api/construction-tasks")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);

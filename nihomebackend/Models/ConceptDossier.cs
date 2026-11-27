@@ -7,6 +7,8 @@ public sealed class ConceptRevision
     public int ConceptOptionId { get; set; }
     public ConceptOption ConceptOption { get; set; } = null!;
     public int Number { get; set; }
+    /// <summary>Why this version exists: a <c>drawing_revision_reason</c> code. Null only for R00.</summary>
+    public string? ReasonCode { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int? CreatedByUserId { get; set; }
     public DateTime? FrozenAt { get; set; }

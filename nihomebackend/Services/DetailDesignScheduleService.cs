@@ -441,6 +441,7 @@ public sealed class DetailDesignScheduleService(
             .Include(item => item.AssigneeMember)
             .SingleOrDefaultAsync(item => item.Id == taskId && item.OperationalProjectId == projectId, ct);
         if (task is null) return null;
+        await EnsureDossierOpenAsync(task.DesignProjectId, ct);
         if (task.AssigneeMember.UserId != callerUserId)
             throw new DesignScheduleOperationException(
                 "Chỉ người phụ trách đầu việc được tự bắt đầu và cập nhật tiến độ. Người quản lý lịch cập nhật tại nút Sửa.");
@@ -483,6 +484,7 @@ public sealed class DetailDesignScheduleService(
             .Include(item => item.Predecessors)
             .SingleOrDefaultAsync(item => item.Id == taskId && item.OperationalProjectId == projectId, ct);
         if (task is null) return null;
+        await EnsureDossierOpenAsync(task.DesignProjectId, ct);
         if (task.AssigneeMember.UserId != callerUserId)
             throw new DesignScheduleOperationException("Chỉ người phụ trách được đánh dấu hoàn thành đầu việc thiết kế.");
         await EnsureActiveAssignmentAsync(task, ct);
@@ -534,6 +536,7 @@ public sealed class DetailDesignScheduleService(
             .Include(item => item.Predecessors)
             .SingleOrDefaultAsync(item => item.Id == taskId && item.OperationalProjectId == projectId, ct);
         if (task is null) return null;
+        await EnsureDossierOpenAsync(task.DesignProjectId, ct);
         if (task.ApproverMember.UserId != callerUserId)
             throw new DesignScheduleOperationException("Chỉ người duyệt đã được chỉ định được duyệt đầu việc này.");
         await EnsureActiveAssignmentAsync(task, ct);
@@ -1020,10 +1023,12 @@ public sealed class DetailDesignScheduleService(
         CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var phases = await db.DesignSchedulePhases.AsNoTracking()
-            .Where(item => item.OperationalProjectId == projectId && item.DesignProjectId == designProjectId)
+        // Code is stored as text, so SQL would sort BasicDesign before Concept; order by stage in memory.
+        var phases = (await db.DesignSchedulePhases.AsNoTracking()
+                .Where(item => item.OperationalProjectId == projectId && item.DesignProjectId == designProjectId)
+                .ToListAsync(ct))
             .OrderBy(item => item.Code)
-            .ToListAsync(ct);
+            .ToList();
         var allTasks = await db.DesignScheduleTasks.AsNoTracking()
             .Include(item => item.Predecessors)
             .Include(item => item.Successors)
@@ -1247,6 +1252,13 @@ public sealed class DetailDesignScheduleService(
     {
         if (!await CanManageFlowAsync(projectId, designProjectId, userId, ct))
             throw new DesignScheduleOperationException("Bạn không có quyền quản lý tiến độ của luồng Thiết kế này. Hãy liên hệ người phụ trách luồng để được phân công.");
+    }
+
+    private async Task EnsureDossierOpenAsync(int designProjectId, CancellationToken ct)
+    {
+        if (await db.DesignProjects.AsNoTracking().AnyAsync(item =>
+                item.Id == designProjectId && item.Status == DesignProjectStatus.Cancelled, ct))
+            throw new DesignScheduleOperationException("Hồ sơ thiết kế đã đóng, chỉ xem được.");
     }
 
     private async Task EnsureCanManageAsync(int projectId, int callerUserId, CancellationToken ct)

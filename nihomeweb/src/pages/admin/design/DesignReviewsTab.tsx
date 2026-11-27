@@ -16,6 +16,7 @@ import {
   Send,
   UserCheck,
   Users,
+  Undo2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ const REVIEW_ACTION_LABELS = {
   approve: "designProjects.reviews.approve",
   changes: "designProjects.reviews.changes",
   reject: "designProjects.reviews.reject",
+  return: "designProjects.reviews.returnInternal",
 } as const;
 export const DesignReviewsTab = ({
   project,
@@ -95,7 +97,10 @@ export const DesignReviewsTab = ({
   const confirm = useConfirm();
   const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
   const { has } = usePermissions();
+  // A closed dossier is read-only for everyone.
+  const closed = project?.status === "Cancelled";
   const isDesignManager =
+    !closed &&
     Boolean(project) &&
     (currentUserId === (project?.designManagerUserId ?? project?.projectManagerUserId) ||
       has("operations.projects.view.all"));
@@ -313,11 +318,19 @@ export const DesignReviewsTab = ({
 
   const act = async (
     review: DesignReviewResponse,
-    action: "internal" | "comment" | "consolidate" | "client" | "approve" | "changes" | "reject",
+    action:
+      | "internal"
+      | "comment"
+      | "consolidate"
+      | "client"
+      | "approve"
+      | "changes"
+      | "reject"
+      | "return",
   ) => {
     // These steps freeze the revision or record the client's answer and cannot be undone.
     if (
-      ["internal", "client", "approve", "changes", "reject"].includes(action) &&
+      ["internal", "client", "approve", "changes", "reject", "return"].includes(action) &&
       !(await confirm(t(`designProjects.reviews.confirm.${action}`, { title: review.title }), {
         destructive: action === "reject",
         confirmLabel: t(REVIEW_ACTION_LABELS[action as keyof typeof REVIEW_ACTION_LABELS]),
@@ -345,6 +358,8 @@ export const DesignReviewsTab = ({
         await adminApi.consolidateDesignReview(projectId, review.id, note, review.rowVersion, key);
       else if (action === "client")
         await adminApi.submitDesignReviewClient(projectId, review.id, review.rowVersion, key);
+      else if (action === "return")
+        await adminApi.returnDesignReview(projectId, review.id, note, review.rowVersion, key);
       else
         await adminApi.recordDesignClientDecision(
           projectId,
@@ -509,6 +524,11 @@ export const DesignReviewsTab = ({
               </div>
               <Badge variant="outline">{t(`designProjects.reviews.status.${review.status}`)}</Badge>
             </div>
+            {review.status === "ReturnedInternally" && review.internalReturnReason ? (
+              <p className="mt-2 whitespace-pre-wrap break-words rounded-md border border-warning/40 bg-warning-soft p-2 text-sm text-warning-strong">
+                {t("designProjects.reviews.returnReason")}: {review.internalReturnReason}
+              </p>
+            ) : null}
             <p className="mt-2 text-xs text-muted-foreground">
               {t("designProjects.reviews.recipients")}:{" "}
               {review.recipients.map((item) => `${item.name} · ${personRole(item, t)}`).join(", ")}
@@ -699,10 +719,10 @@ export const DesignReviewsTab = ({
                 />
               </div>
             ) : null}
-            {review.canComment ||
+            {(!closed && review.canComment) ||
             (isDesignManager &&
               review.canManage &&
-              ["InternalReview", "SubmittedToClient"].includes(review.status)) ? (
+              ["InternalReview", "ReadyForClient", "SubmittedToClient"].includes(review.status)) ? (
               <div className="mt-3 space-y-1.5">
                 <Label htmlFor={`review-${review.id}-note`}>
                   {t("designProjects.reviews.notePlaceholder")}
@@ -719,7 +739,7 @@ export const DesignReviewsTab = ({
                 />
               </div>
             ) : null}
-            {review.canComment && review.status === "InternalReview" ? (
+            {!closed && review.canComment && review.status === "InternalReview" ? (
               <div className="mt-3 max-w-sm">
                 <Label htmlFor={`review-${review.id}-comment-target`}>
                   {t("designProjects.reviews.commentTarget")}
@@ -776,7 +796,7 @@ export const DesignReviewsTab = ({
                   ) : null}
                 </div>
               ) : null}
-              {review.canComment && review.status === "InternalReview" ? (
+              {!closed && review.canComment && review.status === "InternalReview" ? (
                 <Button
                   variant="outline"
                   disabled={busy === review.id || !notes[review.id]?.trim()}
@@ -799,6 +819,18 @@ export const DesignReviewsTab = ({
                 <Button disabled={busy === review.id} onClick={() => void act(review, "client")}>
                   <Send className="mr-1 h-4 w-4" />
                   {t("designProjects.reviews.submitClient")}
+                </Button>
+              ) : null}
+              {isDesignManager &&
+              review.canManage &&
+              ["InternalReview", "ReadyForClient"].includes(review.status) ? (
+                <Button
+                  variant="destructiveOutline"
+                  disabled={busy === review.id || !notes[review.id]?.trim()}
+                  onClick={() => void act(review, "return")}
+                >
+                  <Undo2 className="mr-1 h-4 w-4" />
+                  {t("designProjects.reviews.returnInternal")}
                 </Button>
               ) : null}
               {isDesignManager && review.canManage && review.status === "SubmittedToClient" ? (

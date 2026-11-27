@@ -36,6 +36,12 @@ public class CreateDesignProjectRequest
 /// Update payload. Stage is intentionally excluded because lifecycle
 /// transitions are owned by the Concept and Basic Design approval workflows.
 /// </summary>
+public sealed class CloseDesignProjectRequest
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(1000)]
+    public string Reason { get; set; } = string.Empty;
+}
+
 public class UpdateDesignProjectRequest : CreateDesignProjectRequest
 {
     /// <summary>Active / OnHold / Completed / Cancelled.</summary>

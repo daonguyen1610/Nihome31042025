@@ -41,13 +41,8 @@ public interface IDesignProjectService
 
     Task<DesignProjectResponse?> UpdateAsync(int id, UpdateDesignProjectRequest request, int callerUserId, CancellationToken ct = default);
 
-    Task<DeletionImpactResponse?> GetDeletionImpactAsync(int id, CancellationToken ct = default);
-
-    Task<HardDeleteOperationResult?> DeleteAsync(
-        int id,
-        ConfirmDeletionRequest request,
-        int callerUserId,
-        CancellationToken ct = default);
+    /// <summary>Ends a dossier that will not continue. Data stays; the dossier becomes read-only.</summary>
+    Task<DesignProjectResponse?> CloseAsync(int id, string reason, int callerUserId, CancellationToken ct = default);
 
     /// <summary>
     /// Idempotent explicit creation from a contract. Skips when a design

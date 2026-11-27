@@ -382,6 +382,9 @@ public class OperationalProjectsController(
     {
         var scope = await ResolveScopeAsync(ct);
         if (scope is null) return Unauthorized();
+        // Project-wide rights do not reopen a closed design dossier.
+        if (await projectAccess.IsClosedDesignSourceAsync(request.SourceEntityType, request.SourceRecordId, ct))
+            return ClosedDossier();
         // Size follows Settings; project documents keep their own type rule (blocked executables).
         if (request.File is { } file &&
             BusinessFileRules.SizeProblem(file, await siteSettings.GetUploadLimitMbAsync(UploadLimitKind.ProjectDocuments, ct)) is { } problem)
@@ -479,6 +482,7 @@ public class OperationalProjectsController(
         if (scope is null) return Unauthorized();
         var designManager = await projectAccess.CanManageDesignDocumentAsync(scope.Value.UserId, id, documentId, ct);
         if (!designManager && !await permissions.HasAsync(scope.Value.UserId, "operations.projects.manage", ct)) return Forbid();
+        if (await projectAccess.IsClosedDesignDocumentAsync(documentId, ct)) return ClosedDossier();
         try
         {
             if (!await documents.DeleteAsync(id, documentId, scope.Value.UserId, scope.Value.CanSeeAll || designManager, ct)) return NotFound();
@@ -514,6 +518,7 @@ public class OperationalProjectsController(
         if (scope is null) return Unauthorized();
         var designManager = await projectAccess.CanManageDesignDocumentAsync(scope.Value.UserId, id, documentId, ct);
         if (!designManager && !await permissions.HasAsync(scope.Value.UserId, "operations.projects.manage", ct)) return Forbid();
+        if (await projectAccess.IsClosedDesignDocumentAsync(documentId, ct)) return ClosedDossier();
         return await MutateDocumentAsync("project-document.classify", id, documentId,
             () => documents.ClassifyAsync(id, documentId, request, scope.Value.UserId, scope.Value.CanSeeAll || designManager, ct));
     }
@@ -526,9 +531,13 @@ public class OperationalProjectsController(
         if (scope is null) return Unauthorized();
         var designManager = await projectAccess.CanManageDesignDocumentAsync(scope.Value.UserId, id, documentId, ct);
         if (!designManager && !await permissions.HasAsync(scope.Value.UserId, "operations.projects.manage", ct)) return Forbid();
+        if (await projectAccess.IsClosedDesignDocumentAsync(documentId, ct)) return ClosedDossier();
         return await MutateDocumentAsync("project-document.resolve_conflict", id, documentId,
             () => documents.ResolveConflictAsync(id, documentId, request, scope.Value.UserId, scope.Value.CanSeeAll || designManager, ct));
     }
+
+    private BadRequestObjectResult ClosedDossier() =>
+        BadRequest(new { message = "Hồ sơ thiết kế đã đóng, chỉ xem được." });
 
     private async Task<ActionResult<ProjectDocumentResponse>> MutateDocumentAsync(
         string action, int projectId, long documentId, Func<Task<ProjectDocumentResponse?>> mutation)

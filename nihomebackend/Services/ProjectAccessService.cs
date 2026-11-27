@@ -116,17 +116,36 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
             operationalProjectId, document.SourceEntityType, document.SourceRecordId, ct);
     }
 
+    public async Task<bool> IsClosedDesignSourceAsync(
+        string? sourceType, long? sourceId, CancellationToken ct = default)
+    {
+        if (DesignSourceType(sourceType) is not { } resourceType || sourceId is null or <= 0 or > int.MaxValue)
+            return false;
+        var designId = await ResolveDesignProjectIdAsync(resourceType, (int)sourceId.Value, ct);
+        return designId.HasValue && await IsDesignDossierClosedAsync(designId.Value, ct);
+    }
+
+    public async Task<bool> IsClosedDesignDocumentAsync(long documentId, CancellationToken ct = default)
+    {
+        var source = await db.ProjectDocuments.AsNoTracking().Where(item => item.Id == documentId)
+            .Select(item => new { item.SourceEntityType, item.SourceRecordId }).SingleOrDefaultAsync(ct);
+        return source is not null &&
+            await IsClosedDesignSourceAsync(source.SourceEntityType, source.SourceRecordId, ct);
+    }
+
+    private static DesignProjectResourceType? DesignSourceType(string? sourceType) => sourceType switch
+    {
+        nameof(ConceptOption) => DesignProjectResourceType.ConceptOption,
+        nameof(BasicDesignDoc) => DesignProjectResourceType.BasicDesignDoc,
+        nameof(ShopDrawing) => DesignProjectResourceType.ShopDrawing,
+        _ => null,
+    };
+
     public async Task<bool> CanManageDesignDocumentSourceAsync(int userId, int operationalProjectId,
         string? sourceType, long? sourceId, CancellationToken ct = default)
     {
         if (sourceId is null or <= 0 or > int.MaxValue) return false;
-        var resourceType = sourceType switch
-        {
-            nameof(ConceptOption) => (DesignProjectResourceType?)DesignProjectResourceType.ConceptOption,
-            nameof(BasicDesignDoc) => DesignProjectResourceType.BasicDesignDoc,
-            nameof(ShopDrawing) => DesignProjectResourceType.ShopDrawing,
-            _ => null,
-        };
+        var resourceType = DesignSourceType(sourceType);
         if (!resourceType.HasValue) return false;
         var designId = await ResolveDesignProjectIdAsync(resourceType.Value, (int)sourceId.Value, ct);
         return designId.HasValue && await db.DesignProjects.AnyAsync(design => design.Id == designId &&
@@ -173,6 +192,20 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
         int userId,
         int designProjectId,
         CancellationToken ct = default)
+    {
+        var granted = await GetGrantedDesignProjectPermissionsAsync(userId, designProjectId, ct);
+        if (!granted.CanView || !await IsDesignDossierClosedAsync(designProjectId, ct)) return granted;
+        return DesignProjectPermissions.ViewOnly;
+    }
+
+    public Task<bool> IsDesignDossierClosedAsync(int designProjectId, CancellationToken ct = default) =>
+        db.DesignProjects.AsNoTracking().AnyAsync(project =>
+            project.Id == designProjectId && project.Status == DesignProjectStatus.Cancelled, ct);
+
+    private async Task<DesignProjectPermissions> GetGrantedDesignProjectPermissionsAsync(
+        int userId,
+        int designProjectId,
+        CancellationToken ct)
     {
         var project = await db.DesignProjects.AsNoTracking()
             .Where(item => item.Id == designProjectId)
@@ -259,7 +292,7 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
                 item.DesignLeadUserId,
             })
             .SingleOrDefaultAsync(ct);
-        if (project is null) return false;
+        if (project is null || await IsDesignDossierClosedAsync(designProjectId, ct)) return false;
         if (await HasAdministrativeBypassAsync(userId, ct)) return true;
         if (project.DesignLeadUserId == userId || project.ProjectManagerUserId == userId) return true;
         if (!project.OperationalProjectId.HasValue) return false;
@@ -284,12 +317,13 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
         string? disciplineCode = null) =>
         HasDesignProjectPermissionAsync(userId, designProjectId, DesignProjectAction.Update, ct, disciplineCode);
 
-    public Task<bool> CanApproveDesignProjectAsync(
+    public async Task<bool> CanApproveDesignProjectAsync(
         int userId,
         int designProjectId,
         CancellationToken ct = default,
         string? disciplineCode = null) =>
-        HasDesignRoleAsync(userId, designProjectId, disciplineCode, approvalOnly: true, ct);
+        !await IsDesignDossierClosedAsync(designProjectId, ct) &&
+        await HasDesignRoleAsync(userId, designProjectId, disciplineCode, approvalOnly: true, ct);
 
     public async Task<bool> CanViewDesignResourceAsync(
         int userId,

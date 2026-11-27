@@ -37,8 +37,9 @@ public class ConceptOptionsController(
     [HttpPost("{id:int}/revisions")]
     [RequirePermission("design.concepts", "view")]
     [Idempotency("design.concept.revision", requireKey: true)]
-    public Task<ActionResult<ConceptRevisionResponse>> CreateRevision(int id, CancellationToken ct) =>
-        ChangeDossier(id, DesignProjectAction.Create, (userId) => dossier.CreateRevisionAsync(id, userId, ct), ct);
+    public Task<ActionResult<ConceptRevisionResponse>> CreateRevision(
+        int id, [FromBody] CreateConceptRevisionRequest request, CancellationToken ct) =>
+        ChangeDossier(id, DesignProjectAction.Create, (userId) => dossier.CreateRevisionAsync(id, request, userId, ct), ct);
 
     [HttpPost("{id:int}/revisions/{revisionId:int}/artifacts")]
     [RequirePermission("design.concepts", "view")]

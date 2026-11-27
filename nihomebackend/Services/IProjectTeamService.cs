@@ -6,6 +6,11 @@ namespace NihomeBackend.Services;
 
 public interface IProjectAccessService
 {
+    /// <summary>A closed design dossier is read-only for everyone, whatever rights they hold elsewhere.</summary>
+    Task<bool> IsDesignDossierClosedAsync(int designProjectId, CancellationToken ct = default);
+    /// <summary>Whether a design record that a project document belongs to sits in a closed dossier.</summary>
+    Task<bool> IsClosedDesignSourceAsync(string? sourceType, long? sourceId, CancellationToken ct = default);
+    Task<bool> IsClosedDesignDocumentAsync(long documentId, CancellationToken ct = default);
     Task<bool> CanViewOperationalProjectAsync(int userId, int projectId, CancellationToken ct = default);
     /// <summary>
     /// Whether the user may open the project's own page: project view, and all projects or being

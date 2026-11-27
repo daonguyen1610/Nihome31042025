@@ -1529,6 +1529,10 @@ namespace nihomebackend.Migrations
                     b.Property<int>("Number")
                         .HasColumnType("int");
 
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ConceptOptionId", "Number")
@@ -3765,6 +3769,16 @@ namespace nihomebackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ClosedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClosedReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<int?>("ContractId")
                         .HasColumnType("int");
 
@@ -3933,6 +3947,16 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("DesignProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("InternalReturnReason")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime?>("InternalReturnedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("InternalReturnedByUserId")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("InternalSubmittedAt")

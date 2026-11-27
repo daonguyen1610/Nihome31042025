@@ -617,6 +617,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
           open={!!revisionsFor}
           onOpenChange={(v) => (!v ? setRevisionsFor(null) : undefined)}
           designProjectId={project.id}
+          readOnly={project.status === "Cancelled"}
           targetType="ShopDrawing"
           targetId={revisionsFor.id}
           targetCode={revisionsFor.drawingCode}

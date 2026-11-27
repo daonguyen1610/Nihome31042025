@@ -721,6 +721,10 @@ Quản lý mô hình 3D, mặt bằng công năng, ảnh trình bày; ghi ý ki�
 4. Sau khi trình, ghi nguyên văn ý kiến khách, người đại diện, kênh, thời điểm và bằng chứng (biên bản, email, tài liệu). Ghi phản hồi và kết quả xử lý trước khi trình phiên bản thay thế R01 trở đi. Nút tạo phiên bản sửa chỉ hiện khi lần trình gần nhất cho phép.
 5. **Chốt phương án** chỉ mở khi khách đã duyệt và đã có biên bản nghiệm thu ký. Ở tab Trình duyệt, chọn tệp TK-M03 đã ký (đã đồng bộ, tách riêng), nhập người ký phía khách và ngày ký, rồi chốt đúng phương án đã duyệt.
 
+- Tab **Hồ sơ** liệt kê từng mục. Mỗi dòng cho biết đã có file, không áp dụng hay còn thiếu; bấm **Thêm file** hoặc **Không áp dụng** (ghi lý do ít nhất 10 ký tự) ngay tại dòng đó.
+- Dải trạng thái đầu khung cho biết còn gì đang chặn việc trình: mục thiếu, file đang đồng bộ, file đồng bộ lỗi, hoặc ý kiến khách ở phiên bản trước chưa được phản hồi.
+- Phiên bản mới (R01 trở đi) chỉ tạo được sau khi hồ sơ bị trả lại nội bộ, hoặc khách yêu cầu sửa hay từ chối. Bắt buộc chọn **lý do**: yêu cầu khách hàng, cơ quan nhà nước, lỗi nội bộ hoặc lý do khác trong danh mục.
+
 Kinh doanh trình khách theo ISO; Chủ nhiệm ghi nhận việc trình và quyết định. Biên bản TK-M02 không thay TK-M03. Khách không cần đăng nhập hay ký qua cổng, và không cần trình xem 3D chuyên dụng để chốt. Chốt một phương án thì các phương án còn lại bị loại. Bỏ một phương án cần xác nhận; tài liệu đã trình và lịch sử vẫn giữ. Số lần trình nội bộ được ghi riêng với số revision của phương án.
 
 #### 3.2.3 Thiết kế cơ sở
@@ -750,6 +754,7 @@ Có hai nơi duyệt cho hai quyết định khác nhau:
 - Người nhận góp ý chung cho cả hồ sơ, hoặc chọn một tài liệu dự án đính kèm trong đợt trình; không gắn được tệp khác của dự án.
 - Thông báo trình duyệt mở thẳng đợt trình được giao, kể cả với người ngoài đội ngũ. Trang này không cho vào tab hay tài liệu khác của dự án.
 - Chủ nhiệm chọn người nhận theo từng người, theo phòng ban, hoặc cả hai. Chọn phòng ban thì hệ thống thêm các thành viên đang hoạt động được phép nhận hồ sơ trình (trừ chính Chủ nhiệm); phòng không còn ai đủ điều kiện sẽ bị từ chối. Mặc định Kinh doanh, Trưởng phòng Kinh doanh, PM, BGĐ và các vai trò thiết kế được nhận. Quản trị viên có thể cho một vai trò tùy chỉnh nhận hồ sơ trình bằng quyền **Nhận hồ sơ trình nội bộ Thiết kế**; quyền này không mở các hồ sơ khác.
+- **Trả lại nội bộ:** khi hồ sơ đang trình nội bộ hoặc sẵn sàng trình khách mà không đạt, Chủ nhiệm ghi lý do rồi chọn **Trả lại nội bộ**. Đợt trình đó không gửi khách được nữa; phần sửa làm ở phiên bản mới. Hồ sơ đã trình khách thì không trả lại được.
 - Quyết định của khách: Khách đã duyệt, Khách yêu cầu sửa, hoặc Từ chối; hai quyết định sau bắt buộc ghi lý do.
 - Tải tệp từ đợt trình sẽ kiểm tra tệp còn khớp với bản đã trình. Nếu đã đổi, hệ thống chặn và giải thích; liên hệ Chủ nhiệm để kiểm tra phiên bản. Bản đã trình không bị thay tự động.
 - Bản nháp chưa trình không thay được quyết định của khách đã ghi. Nếu một đợt khác đã trình cùng revision, bản nháp còn lại chỉ để tham khảo, nút trình bị khóa.
@@ -775,10 +780,11 @@ Trình duyệt bản vẽ trước khi phát hành, đóng dấu điện tử "I
 
 Xác nhận này không phải duyệt thiết kế và không tạo RFQ hay đề nghị mua. Chỉ đợt đã phát hành gửi cho mình mới hiện. Rời dự án hoặc mất quyền thì mất quyền xem. Bản vẽ khác với bản đã phát hành sẽ bị chặn tải; liên hệ Thiết kế kiểm tra. Người nhận bên ngoài (ghi tên) vẫn theo cách theo dõi cũ.
 
-#### 3.2.8 Xóa hồ sơ thiết kế
+#### 3.2.8 Đóng hồ sơ và xóa bản ghi thiết kế
 
-- Hồ sơ đã trình khách thì không xóa vĩnh viễn được, kể cả khi khách từ chối. Sửa bằng cách ghi quyết định của khách và tạo revision thay thế.
-- Chỉ BGD hoặc SUPER_ADMIN xóa vĩnh viễn được hồ sơ thất bại/đã hủy: mở bảng ảnh hưởng, xử lý mọi vướng mắc về tệp, IFC, đợt trình dùng chung, rồi gõ đúng mã hồ sơ. Bảng ảnh hưởng hết hạn khi dữ liệu liên quan thay đổi; làm mới rồi thử lại.
+- **Không ai xóa bộ hồ sơ thiết kế.** Hồ sơ không tiếp tục (khách dừng, trượt thầu) được **đóng**: ở danh sách Hồ sơ thiết kế chọn **Đóng hồ sơ** và ghi lý do. Quyền này mặc định cấp cho trưởng nhóm thiết kế (`DESIGN_LEAD`, vai trò trưởng bộ phận) và quản trị viên.
+- Hồ sơ đã đóng giữ nguyên dữ liệu, chỉ xem được, không mở lại. Trang hồ sơ hiện lý do và ngày đóng.
+- Với bản ghi con (phương án đã loại bỏ, bản vẽ bị từ chối, đợt IFC đã hủy): hồ sơ đã trình khách không xóa vĩnh viễn được; chỉ BGD hoặc SUPER_ADMIN xóa được bản ghi đủ điều kiện, sau khi xem bảng ảnh hưởng và gõ đúng mã.
 - Không xóa hàng loạt bản vẽ Thiết kế chi tiết; mỗi hồ sơ phải xem và xác nhận riêng.
 
 **Chưa có:** xem 3D trực tiếp, video walkthrough, ghi chú trên bản vẽ, xuất gói IFC, xem DWG trực tiếp (xem trước tùy loại tệp hỗ trợ), nhập đầy đủ MS Project.
