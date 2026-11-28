@@ -421,7 +421,9 @@ Use this rule: pure logic → unit; HTTP/auth/persistence contract → integrati
 ## Documentation and quality checks
 
 Keep the root of `docs/` limited to these canonical files plus the curated
-`docs/Nicon/` customer-evidence directory:
+`docs/Nicon/` customer-evidence directory and the `docs/agents/` directory,
+which holds only agent-skill settings (issue tracker, triage labels, domain
+docs):
 
 - `application_developer.md` — setup, architecture, API contracts, migrations, operations, and testing guidance.
 - `Nicon_BreakTask_v1.xlsx` — authoritative customer task breakdown.
@@ -447,8 +449,8 @@ During every change:
 - Do not create separate ticket notes, feature documents, review reports, scenario matrices, or dated validation reports in `docs/`. Put reusable guidance in the appropriate canonical guide; report run-specific evidence, defects, and residual risks in the task response, PR description, or test artifacts.
 - Consolidate overlapping guidance and replace obsolete sections instead of appending duplicate histories. Preserve current business and safety contracts when cleaning up documentation.
 - Do not rewrite the three customer source documents merely for housekeeping; update them only for confirmed requirement changes.
-- Before committing, verify that `docs/` contains only the six canonical files
-  and `docs/Nicon/`, that the evidence directory follows the structure above,
+- Before committing, verify that `docs/` contains only the six canonical files,
+  `docs/Nicon/` and `docs/agents/`, that the evidence directory follows the structure above,
   and that documentation links and references still resolve.
 - When a guide states counts, estimates, statuses or supported languages, cite
   the source version/range or derive them from current code. Do not retain a
